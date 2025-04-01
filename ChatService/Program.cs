@@ -1,3 +1,10 @@
+﻿
+using ChatService.Application.Hubs;
+using ChatService.Core.Interfaces;
+using ChatService.Infrastructure.Data;
+using ChatService.Infrastructure.Repositories;
+using ChatService.Infrastructure.Sharding;
+using Microsoft.EntityFrameworkCore;
 
 namespace ChatService
 {
@@ -7,7 +14,14 @@ namespace ChatService
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
+            // Đăng ký dependencies
+            builder.Services.AddDbContext<ChatDbContext>(options =>
+                options.UseNpgsql(builder.Configuration["MetaConnectionString"])); // Connection cho metadata
+            builder.Services.AddScoped<ShardManager>();
+            builder.Services.AddScoped<IShardDistributor, ShardDistributor>();
+            builder.Services.AddScoped<IMessageRepository, MessageRepository>();
+            builder.Services.AddScoped<ChatService.Application.Services.ChatService>();
+            builder.Services.AddSignalR();
 
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -23,10 +37,13 @@ namespace ChatService
                 app.UseSwaggerUI();
             }
 
+            app.UseRouting();
+
+            app.MapHub<ChatHub>("/chatHub");
+
             app.UseHttpsRedirection();
 
             app.UseAuthorization();
-
 
             app.MapControllers();
 
