@@ -4,7 +4,9 @@ namespace ChatService.Core.Interfaces
 {
     public interface IMessageRepository
     {
-        Task AddMessageAsync(string conversationId, Message message);
-        Task<List<Message>> GetMessagesAsync(string conversationId, int limit = 50);
+        Task<Message> AddMessageAsync(Message message);
+        Task<List<Message>> GetMessagesBetweenUsersAsync(int user1Id, int user2Id);
+        Task<User> GetUserByIdAsync(int userId);
+        Task UpdateUserConnectionIdAsync(int userId, string connectionId);
     }
 }

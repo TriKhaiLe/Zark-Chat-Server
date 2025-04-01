@@ -2,32 +2,48 @@ using ChatService.Core.Entities;
 using ChatService.Core.Interfaces;
 using ChatService.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using System;
 
 namespace ChatService.Infrastructure.Repositories
 {
     public class MessageRepository : IMessageRepository
     {
-        private readonly IShardManager _shardManager;
+        private readonly ChatDbContext _context;
 
-        public MessageRepository(IShardManager shardManager)
+        public MessageRepository(ChatDbContext context)
         {
-            _shardManager = shardManager;
+            _context = context;
         }
 
-        public async Task AddMessageAsync(string conversationId, Message message)
+        public async Task<Message> AddMessageAsync(Message message)
         {
-            using var context = await _shardManager.GetShardContextAsync(conversationId);
-            context.Messages.Add(message);
-            await context.SaveChangesAsync();
+            _context.Messages.Add(message);
+            await _context.SaveChangesAsync();
+            return message;
         }
 
-        public async Task<List<Message>> GetMessagesAsync(string conversationId, int limit = 50)
+        public async Task<List<Message>> GetMessagesBetweenUsersAsync(int user1Id, int user2Id)
         {
-            using var context = await _shardManager.GetShardContextAsync(conversationId);
-            return await context.Messages
-                .OrderByDescending(m => m.Timestamp)
-                .Take(limit)
+            return await _context.Messages
+                .Where(m => (m.SenderId == user1Id && m.ReceiverId == user2Id) ||
+                           (m.SenderId == user2Id && m.ReceiverId == user1Id))
+                .OrderBy(m => m.Timestamp)
                 .ToListAsync();
+        }
+
+        public async Task<User> GetUserByIdAsync(int userId)
+        {
+            return await _context.Users.FindAsync(userId);
+        }
+
+        public async Task UpdateUserConnectionIdAsync(int userId, string connectionId)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user != null)
+            {
+                user.ConnectionId = connectionId;
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }
