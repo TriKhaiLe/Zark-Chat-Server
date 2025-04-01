@@ -1,4 +1,5 @@
 using ChatService.Core.Entities;
+using ChatService.Infrastructure.Data.Configurations;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Reflection.Emit;
@@ -15,13 +16,13 @@ namespace ChatService.Infrastructure.Data
             _tableName = tableName;
         }
 
+        public DbSet<User> Users { get; set; }
         public DbSet<Message> Messages { get; set; }
-        public DbSet<ConversationShard> ConversationShards { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<Message>().ToTable(_tableName.StartsWith("Messages_") ? _tableName : "Messages");
-            modelBuilder.Entity<ConversationShard>().ToTable("ConversationShards");
+            modelBuilder.ApplyConfiguration(new UserConfiguration());
+            modelBuilder.ApplyConfiguration(new MessageConfiguration());
         }
     }
 }

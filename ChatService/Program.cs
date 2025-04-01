@@ -3,7 +3,6 @@ using ChatService.Application.Hubs;
 using ChatService.Core.Interfaces;
 using ChatService.Infrastructure.Data;
 using ChatService.Infrastructure.Repositories;
-using ChatService.Infrastructure.Sharding;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChatService
@@ -14,13 +13,21 @@ namespace ChatService
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowChatClient", builder =>
+                {
+                    builder.WithOrigins("http://127.0.0.1:5500") 
+                           .AllowAnyMethod()
+                           .AllowAnyHeader()
+                           .AllowCredentials(); // Quan trọng cho SignalR
+                });
+            });
+
             // Đăng ký dependencies
             builder.Services.AddDbContext<ChatDbContext>(options =>
-                options.UseNpgsql(builder.Configuration["MetaConnectionString"])); // Connection cho metadata
-            builder.Services.AddScoped<ShardManager>();
-            builder.Services.AddScoped<IShardDistributor, ShardDistributor>();
+                options.UseNpgsql(builder.Configuration["ConnectionStrings:DefaultConnection"]));
             builder.Services.AddScoped<IMessageRepository, MessageRepository>();
-            builder.Services.AddScoped<ChatService.Application.Services.ChatService>();
             builder.Services.AddSignalR();
 
             builder.Services.AddControllers();
@@ -29,6 +36,8 @@ namespace ChatService
             builder.Services.AddSwaggerGen();
 
             var app = builder.Build();
+
+            app.UseCors("AllowChatClient");
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
