@@ -24,11 +24,13 @@ namespace ChatService.Infrastructure.Repositories
 
         public async Task<List<Message>> GetMessagesBetweenUsersAsync(int user1Id, int user2Id)
         {
-            return await _context.Messages
+            var messages = await _context.Messages
                 .Where(m => (m.SenderId == user1Id && m.ReceiverId == user2Id) ||
                            (m.SenderId == user2Id && m.ReceiverId == user1Id))
                 .OrderBy(m => m.Timestamp)
                 .ToListAsync();
+
+            return messages;
         }
 
         public async Task<User> GetUserByIdAsync(int userId)
