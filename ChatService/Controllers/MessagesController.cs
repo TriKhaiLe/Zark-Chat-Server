@@ -1,19 +1,16 @@
 ﻿using ChatService.Application.DTOs;
 using ChatService.Core.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ChatService.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class MessagesController : ControllerBase
+    [Authorize]
+    public class MessagesController(IMessageRepository messageRepository) : ControllerBase
     {
-        private readonly IMessageRepository _messageRepository;
-
-        public MessagesController(IMessageRepository messageRepository)
-        {
-            _messageRepository = messageRepository;
-        }
+        private readonly IMessageRepository _messageRepository = messageRepository;
 
         [HttpGet("{userId1}/{userId2}")]
         public async Task<IActionResult> GetChatHistory(int userId1, int userId2)
