@@ -12,7 +12,7 @@ namespace ChatService.Infrastructure.Authentication
             _httpClient = httpClient;
         }
 
-        public async Task<string?> GetForCredentialsAsync(string email, string password)
+        public async Task<(string? IdToken, string? UserId)> GetForCredentialsAsync(string email, string password)
         {
             var request = new
             {
@@ -22,13 +22,16 @@ namespace ChatService.Infrastructure.Authentication
             };
             var response = await _httpClient.PostAsJsonAsync("", request);
             var authToken = await response.Content.ReadFromJsonAsync<AuthenticationToken>();
-            return authToken?.IdToken;
+            return (authToken?.IdToken, authToken?.LocalId);
         }
 
         private class AuthenticationToken
         {
             [JsonPropertyName("idToken")]
             public string? IdToken { get; set; }
+
+            [JsonPropertyName("localId")]
+            public string? LocalId { get; set; } // Firebase UID
         }
     }
 }

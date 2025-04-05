@@ -32,20 +32,5 @@ namespace ChatService.Infrastructure.Repositories
 
             return messages;
         }
-
-        public async Task<User> GetUserByIdAsync(int userId)
-        {
-            return await _context.Users.FindAsync(userId);
-        }
-
-        public async Task UpdateUserConnectionIdAsync(int userId, string connectionId)
-        {
-            var user = await _context.Users.FindAsync(userId);
-            if (user != null)
-            {
-                user.ConnectionId = connectionId;
-                await _context.SaveChangesAsync();
-            }
-        }
     }
 }

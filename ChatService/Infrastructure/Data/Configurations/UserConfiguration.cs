@@ -10,7 +10,11 @@ namespace ChatService.Infrastructure.Data.Configurations
         {
             builder.HasKey(u => u.Id);
             builder.Property(u => u.Username).IsRequired().HasMaxLength(50);
-            builder.Property(u => u.ConnectionId).HasMaxLength(100);
+            builder.HasMany(u => u.Connections)
+                .WithOne(uc => uc.User)
+                .HasForeignKey(uc => uc.UserId)
+                .OnDelete(DeleteBehavior.Cascade); // Xóa các kết nối khi người dùng bị xóa
+
         }
     }
 }
