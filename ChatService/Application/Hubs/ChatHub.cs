@@ -12,25 +12,11 @@ namespace ChatService.Application.Hubs
         private readonly IMessageRepository _messageRepository = messageRepository;
         private readonly IUserRepository _userRepository = userRepository;
 
-        public async Task SendPrivateMessage(int receiverId, string content)
+        public async Task SendPrivateMessage(int senderId, int receiverId, string content)
         {
-            // Lấy UID từ Firebase token
-            var senderUid = Context.User?.FindFirst("sub")?.Value; // "sub" chứa UID trong Firebase token
-            if (string.IsNullOrEmpty(senderUid))
-            {
-                throw new HubException("User not authenticated");
-            }
-
-            // Tìm senderId từ UID trong database 
-            var sender = await _userRepository.GetUserByFirebaseUid(senderUid);
-            if (sender == null)
-            {
-                throw new HubException("Sender not found");
-            }
-
             var message = new Message
             {
-                SenderId = sender.Id,
+                SenderId = senderId,
                 ReceiverId = receiverId,
                 Content = content,
                 Timestamp = DateTime.UtcNow,
@@ -39,14 +25,17 @@ namespace ChatService.Application.Hubs
 
             await _messageRepository.AddMessageAsync(message);
 
-            var receiver = await _messageRepository.GetUserByIdAsync(receiverId);
-            if (receiver?.ConnectionId != null)
+            var receiver = await _userRepository.GetUserByIdAsync(receiverId);
+            if (receiver?.Connections != null 
+                && 
+                receiver.Connections.Count != 0)
             {
-                await Clients.Client(receiver.ConnectionId)
-                    .SendAsync("ReceiveMessage", sender.Id, content);
+                var connectionIds = receiver.Connections.Select(c => c.ConnectionId).ToList();
+                await Clients.Clients(connectionIds)
+                    .SendAsync("ReceiveMessage", senderId, content);
             }
 
-            await Clients.Caller.SendAsync("ReceiveMessage", sender.Id, content);
+            await Clients.Caller.SendAsync("ReceiveMessage", senderId, content);
         }
 
         public override async Task OnConnectedAsync()
@@ -65,6 +54,17 @@ namespace ChatService.Application.Hubs
                 Console.WriteLine($"Người dùng đã kết nối với UID: {uid}");
 
                 // Logic bổ sung (ví dụ: lưu thông tin kết nối vào cơ sở dữ liệu)
+                var user = await _userRepository.GetUserByFirebaseUid(uid); 
+                if (user != null)
+                {
+                    await _userRepository.AddConnectionIdAsync(user.Id, Context.ConnectionId);
+                    Console.WriteLine($"ConnectionId {Context.ConnectionId} được gán cho user {uid}");
+                }
+                else
+                {
+                    Console.WriteLine($"Không tìm thấy user với UID: {uid}");
+                }
+
                 await base.OnConnectedAsync();
             }
             catch (FirebaseAuthException ex)
@@ -72,6 +72,21 @@ namespace ChatService.Application.Hubs
                 Console.WriteLine($"Xác minh token thất bại: {ex.Message}");
                 throw new HubException("Token không hợp lệ");
             }
+        }
+
+        public override async Task OnDisconnectedAsync(Exception? exception)
+        {
+            var senderUid = Context.User?.FindFirst("user_id")?.Value;
+            if (!string.IsNullOrEmpty(senderUid))
+            {
+                var user = await _userRepository.GetUserByFirebaseUid(senderUid);
+                if (user != null)
+                {
+                    await _userRepository.RemoveConnectionIdAsync(user.Id, Context.ConnectionId);
+                    Console.WriteLine($"Đã xóa ConnectionId {Context.ConnectionId} khỏi user {senderUid}");
+                }
+            }
+            await base.OnDisconnectedAsync(exception);
         }
     }
 }

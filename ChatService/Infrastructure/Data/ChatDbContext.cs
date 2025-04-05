@@ -9,6 +9,7 @@ namespace ChatService.Infrastructure.Data
     public class ChatDbContext : DbContext
     {
         private readonly string _tableName;
+        public DbSet<UserConnection> UserConnections { get; set; }
 
         public ChatDbContext(DbContextOptions<ChatDbContext> options, string tableName = "ConversationShards")
             : base(options)

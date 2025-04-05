@@ -2,6 +2,6 @@
 {
     public interface IJwtProvider
     {
-        Task<string?> GetForCredentialsAsync(string email, string password);
+        Task<(string? IdToken, string? UserId)> GetForCredentialsAsync(string email, string password);
     }
 }
