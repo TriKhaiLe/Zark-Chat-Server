@@ -362,5 +362,8 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 
-appsettings.json
 appsettings.*.json
+
+# Ignore all files in secrets except .gitkeep
+ChatService/secrets/*
+!ChatService/secrets/.gitkeep
