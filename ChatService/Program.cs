@@ -17,6 +17,7 @@ namespace ChatService
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+            var config = builder.Configuration;
 
             builder.Services.AddCors(options =>
             {
@@ -29,24 +30,34 @@ namespace ChatService
                 });
             });
 
+            var serviceAccountPath =
+                config["GoogleCredential:ServiceAccountPath"] // lấy từ appsettings.json khi chạy trực tiếp trên visual studio
+                ?? Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS") // fallback khi chạy docker local
+                ?? "/etc/secrets/zarkchat-service-account.json"; // fallback khi deploy
+
+            var authority = GetConfigValue(config, "Authentication:Authority", "AUTH_AUTHORITY");
+            var validIssuer = GetConfigValue(config, "Authentication:ValidIssuer", "AUTH_VALID_ISSUER");
+            var validAudience = GetConfigValue(config, "Authentication:ValidAudience", "AUTH_VALID_AUDIENCE");
+            var tokenUri = GetConfigValue(config, "Authentication:TokenUri", "AUTH_TOKEN_URI");
+            var connectionString = GetConfigValue(config, "ConnectionStrings:DefaultConnection", "DB_CONNECTION_STRING");
+
             FirebaseApp.Create(new AppOptions()
             {
-                Credential = GoogleCredential.FromFile(builder.Configuration["GoogleCredential:ServiceAccountPath"]),
+                Credential = GoogleCredential.FromFile(serviceAccountPath),
             });
 
             builder.Services.AddAuthentication()
                 .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
                 {
-                    options.Authority = builder.Configuration["Authentication:Authority"];
+                    options.Authority = authority;
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
                         ValidateIssuer = true,
-                        ValidIssuer = builder.Configuration["Authentication:ValidIssuer"],
+                        ValidIssuer = validIssuer,
                         ValidateAudience = true,
-                        ValidAudience = builder.Configuration["Authentication:ValidAudience"],
+                        ValidAudience = validAudience,
                         ValidateLifetime = true
                     };
-
                     options.Events = new JwtBearerEvents
                     {
                         OnMessageReceived = context =>
@@ -65,26 +76,24 @@ namespace ChatService
 
             builder.Services.AddHttpClient<IJwtProvider, JwtProvider>((sp, client) =>
             {
-                var configuration = sp.GetRequiredService<IConfiguration>();
-                client.BaseAddress = new Uri(builder.Configuration["Authentication:TokenUri"]);
+                client.BaseAddress = new Uri(tokenUri);
             });
 
-            // Đăng ký dependencies
             builder.Services.AddDbContext<ChatDbContext>(options =>
-                options.UseNpgsql(builder.Configuration["ConnectionStrings:DefaultConnection"]));
+                options.UseNpgsql(connectionString));
+
             builder.Services.AddScoped<IMessageRepository, MessageRepository>();
             builder.Services.AddScoped<IUserRepository, UserRepository>();
             builder.Services.AddSingleton<IAuthenticationService, AuthenticationService>();
             builder.Services.AddSignalR();
 
             builder.Services.AddControllers();
-            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
@@ -98,26 +107,18 @@ namespace ChatService
 
             app.MapHub<ChatHub>("/chatHub");
 
-            //app.Use(async (context, next) =>
-            //{
-            //    if (context.Request.Path.StartsWithSegments("/chatHub"))
-            //    {
-            //        var authHeader = context.Request.Headers["Authorization"];
-            //        Console.WriteLine($"SignalR request with Authorization: {authHeader}");
-            //    }
-            //    await next();
-            //});
-
             app.UseHttpsRedirection();
 
             app.MapControllers();
 
-            //app.MapGet("/protected-endpoint", (HttpContext context) =>
-            //{
-            //    return Results.Ok(new { message = "Bạn đã xác thực thành công!", user = context.User.Identity.Name });
-            //}).RequireAuthorization();
-
             app.Run();
         }
+
+        static string GetConfigValue(ConfigurationManager config, string key, string? fallbackEnvVar = null)
+        {
+            return config[key] ?? Environment.GetEnvironmentVariable(fallbackEnvVar ?? key)
+                   ?? throw new InvalidOperationException($"Missing configuration for key '{key}' or environment variable '{fallbackEnvVar ?? key}'.");
+        }
+
     }
 }
