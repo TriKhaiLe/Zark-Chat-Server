@@ -1,6 +1,7 @@
 ﻿using ChatService.Core.Entities;
 using ChatService.Core.Interfaces;
 using ChatService.Infrastructure.Data;
+using FirebaseAdmin.Auth;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChatService.Infrastructure.Repositories
@@ -8,6 +9,7 @@ namespace ChatService.Infrastructure.Repositories
     public class UserRepository(ChatDbContext context) : IUserRepository
     {
         private readonly ChatDbContext _context = context;
+        private readonly FirebaseAuth _firebaseAuth = FirebaseAuth.DefaultInstance;
 
         public async Task<User> GetUserByFirebaseUid(string firebaseUid)
         {
@@ -50,6 +52,24 @@ namespace ChatService.Infrastructure.Repositories
                     await _context.SaveChangesAsync();
                 }
             }
+        }
+
+        public async Task<List<User>> GetContactsAsync(int userId)
+        {
+            var user = await _context.Users
+                .Include(u => u.Connections)
+                .SingleOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null)
+            {
+                return new List<User>();
+            }
+
+            var contacts = await _context.Users
+                .Where(u => u.Id != userId)
+                .ToListAsync();
+
+            return contacts;
         }
 
     }

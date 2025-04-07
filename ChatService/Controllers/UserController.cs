@@ -3,9 +3,11 @@ using ChatService.Core.Entities;
 using ChatService.Core.Interfaces;
 using ChatService.Infrastructure.Repositories;
 using Google.Apis.Auth.OAuth2;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
+using System.Security.Claims;
 
 namespace ChatService.Controllers
 {
@@ -47,5 +49,41 @@ namespace ChatService.Controllers
             });
         }
 
+        [Authorize]
+        [HttpGet("contacts")]
+        public async Task<IActionResult> GetContacts(int userId)
+        {
+            var contacts = await _userRepository.GetContactsAsync(userId);
+            var contactDtos = contacts.Select(c => new
+            {
+                c.Id,
+                c.Username
+            });
+            return Ok(contactDtos);
+        }
+
+        [Authorize]
+        [HttpGet("get-id-by-email")]
+        public async Task<IActionResult> GetUidByEmail(string email)
+        {
+            try
+            {
+                string uid = await _authenticationService.GetUidByEmailAsync(email);
+                var user = await _userRepository.GetUserByFirebaseUid(uid);
+                if (user == null)
+                {
+                    return NotFound(new { error = "User not found" });
+                }
+                return Ok(user.Id);
+            }
+            catch (Exception ex)
+            {
+                if (ex.Message.Contains("not found"))
+                {
+                    return NotFound(new { error = ex.Message });
+                }
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
     }
 }
