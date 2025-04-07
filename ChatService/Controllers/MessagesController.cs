@@ -13,9 +13,9 @@ namespace ChatService.Controllers
         private readonly IMessageRepository _messageRepository = messageRepository;
 
         [HttpGet("{userId1}/{userId2}")]
-        public async Task<IActionResult> GetChatHistory(int userId1, int userId2)
+        public async Task<IActionResult> GetChatHistory(int userId1, int userId2, int pageNumber = 1, int pageSize = 20)
         {
-            var messages = await _messageRepository.GetMessagesBetweenUsersAsync(userId1, userId2);
+            var messages = await _messageRepository.GetMessagesBetweenUsersAsync(userId1, userId2, pageNumber, pageSize);
             var messageDtos = messages.Select(m => new MessageDto
             {
                 SenderId = m.SenderId,
