@@ -30,21 +30,28 @@ namespace ChatService
                 });
             });
 
-            var serviceAccountPath =
-                config["GoogleCredential:ServiceAccountPath"] // lấy từ appsettings.json khi chạy trực tiếp trên visual studio
-                ?? Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS") // fallback khi chạy docker local
-                ?? "/etc/secrets/zarkchat-service-account.json"; // fallback khi deploy
-
             var authority = GetConfigValue(config, "Authentication:Authority", "AUTH_AUTHORITY");
             var validIssuer = GetConfigValue(config, "Authentication:ValidIssuer", "AUTH_VALID_ISSUER");
             var validAudience = GetConfigValue(config, "Authentication:ValidAudience", "AUTH_VALID_AUDIENCE");
             var tokenUri = GetConfigValue(config, "Authentication:TokenUri", "AUTH_TOKEN_URI");
             var connectionString = GetConfigValue(config, "ConnectionStrings:DefaultConnection", "DB_CONNECTION_STRING");
 
-            FirebaseApp.Create(new AppOptions()
+            if (builder.Environment.IsDevelopment())
             {
-                Credential = GoogleCredential.FromFile(serviceAccountPath),
-            });
+                FirebaseApp.Create(new AppOptions
+                {
+                    Credential = GoogleCredential.FromFile(config["GoogleCredential:ServiceAccountPath"])
+                });
+            }
+            else
+            {
+                var firebaseJson = Environment.GetEnvironmentVariable("FIREBASE_CONFIG_JSON");
+                var credential = GoogleCredential.FromJson(firebaseJson);
+                FirebaseApp.Create(new AppOptions
+                {
+                    Credential = credential
+                });
+            }
 
             builder.Services.AddAuthentication()
                 .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
