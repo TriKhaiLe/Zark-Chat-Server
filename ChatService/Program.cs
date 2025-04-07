@@ -118,10 +118,10 @@ namespace ChatService
             app.Run();
         }
 
-        static string GetConfigValue(ConfigurationManager config, string key, string? fallbackEnvVar = null)
+        static string? GetConfigValue(ConfigurationManager config, string key, string? fallbackEnvVar = null)
         {
-            return config[key] ?? Environment.GetEnvironmentVariable(fallbackEnvVar ?? key)
-                   ?? throw new InvalidOperationException($"Missing configuration for key '{key}' or environment variable '{fallbackEnvVar ?? key}'.");
+            var configValue = config.GetValue<string>(key);
+            return string.IsNullOrEmpty(configValue) ? Environment.GetEnvironmentVariable(fallbackEnvVar) : configValue;
         }
 
     }
