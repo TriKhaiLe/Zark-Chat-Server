@@ -22,15 +22,14 @@ namespace ChatService.Infrastructure.Repositories
             return message;
         }
 
-        public async Task<List<Message>> GetMessagesBetweenUsersAsync(int user1Id, int user2Id)
+        public async Task<List<Message>> GetMessagesBetweenUsersAsync(int user1Id, int user2Id, int pageNumber, int pageSize)
         {
-            var messages = await _context.Messages
-                .Where(m => (m.SenderId == user1Id && m.ReceiverId == user2Id) ||
-                           (m.SenderId == user2Id && m.ReceiverId == user1Id))
-                .OrderBy(m => m.Timestamp)
+            return await _context.Messages
+                .Where(m => (m.SenderId == user1Id && m.ReceiverId == user2Id) || (m.SenderId == user2Id && m.ReceiverId == user1Id))
+                .OrderByDescending(m => m.Timestamp)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
-
-            return messages;
         }
     }
 }
