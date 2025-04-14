@@ -91,6 +91,8 @@ namespace ChatService
                 options.UseNpgsql(connectionString));
 
             builder.Services.AddScoped<IMessageRepository, MessageRepository>();
+            builder.Services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
+            builder.Services.AddScoped<IConversationRepository, ConversationRepository>();
             builder.Services.AddScoped<IUserRepository, UserRepository>();
             builder.Services.AddSingleton<IAuthenticationService, AuthenticationService>();
 

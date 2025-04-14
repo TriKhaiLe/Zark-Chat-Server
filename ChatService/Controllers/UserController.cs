@@ -21,10 +21,35 @@ namespace ChatService.Controllers
         private readonly IUserRepository _userRepository = userRepository;
 
         [HttpPost("register")]
-        public async Task<IActionResult> RegisterAsync(string email, string password)
+        public async Task<IActionResult> RegisterAsync(string email, string password, string displayName = "")
         {
-            var firebaseUid = await _authenticationService.RegisterAsync(email, password);
-            return Ok(firebaseUid);
+            try
+            {
+                // Register the user with Firebase
+                var firebaseUid = await _authenticationService.RegisterAsync(email, password);
+
+                // Check if the user already exists in the database
+                var existingUser = await _userRepository.GetUserByFirebaseUidAsync(firebaseUid);
+                if (existingUser != null)
+                {
+                    return Conflict(new { message = "User already exists in the system." });
+                }
+
+                // Create a new user in the database
+                var newUser = new User
+                {
+                    FirebaseUid = firebaseUid,
+                    Username = string.IsNullOrEmpty(displayName) ? email.Split('@')[0] : displayName
+                };
+
+                await _userRepository.AddUserAsync(newUser);
+
+                return Ok(new { message = "User registered successfully.", userId = newUser.Id });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
         }
 
         [HttpPost("login")]
@@ -36,7 +61,7 @@ namespace ChatService.Controllers
                 return Unauthorized();
             }
 
-            var user = await userRepository.GetUserByFirebaseUid(localId);
+            var user = await userRepository.GetUserByFirebaseUidAsync(localId);
             if (user == null)
             {
                 return Unauthorized("User not found in system");
@@ -69,7 +94,7 @@ namespace ChatService.Controllers
             try
             {
                 string uid = await _authenticationService.GetUidByEmailAsync(email);
-                var user = await _userRepository.GetUserByFirebaseUid(uid);
+                var user = await _userRepository.GetUserByFirebaseUidAsync(uid);
                 if (user == null)
                 {
                     return NotFound(new { error = "User not found" });

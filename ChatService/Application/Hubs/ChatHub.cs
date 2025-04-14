@@ -1,41 +1,56 @@
 ﻿using ChatService.Core.Entities;
-using ChatService.Core.Interfaces;
-using FirebaseAdmin.Auth;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
-using System.Security.Claims;
+using FirebaseAdmin.Auth;
+using ChatService.Core.Interfaces;
 
 namespace ChatService.Application.Hubs
 {
-    public class ChatHub(IMessageRepository messageRepository, IUserRepository userRepository) : Hub
+    public class ChatHub(
+        IChatMessageRepository messageRepository,
+        IUserRepository userRepository,
+        IConversationRepository conversationRepository) : Hub
     {
-        private readonly IMessageRepository _messageRepository = messageRepository;
+        private readonly IChatMessageRepository _messageRepository = messageRepository;
         private readonly IUserRepository _userRepository = userRepository;
+        private readonly IConversationRepository _conversationRepository = conversationRepository;
 
-        public async Task SendPrivateMessage(int senderId, int receiverId, string content)
+        public async Task SendMessage(int conversationId, int senderId, string content, string messageType = "Text")
         {
-            var message = new Message
+            var conversation = await _conversationRepository.GetConversationByIdAsync(conversationId);
+            if (conversation == null)
             {
-                SenderId = senderId,
-                ReceiverId = receiverId,
-                Content = content,
-                Timestamp = DateTime.UtcNow,
-                IsRead = false
+                throw new HubException("Conversation does not exist");
+            }
+
+            var isParticipant = conversation.Participants.Any(p => p.UserId == senderId);
+            if (!isParticipant)
+            {
+                throw new HubException("User does not belong to this conversation");
+            }
+
+            var message = new ChatMessage
+            {
+                ConversationId = conversationId,
+                UserSendId = senderId,
+                Message = content,
+                Type = messageType,
+                SendDate = DateTime.UtcNow
             };
 
             await _messageRepository.AddMessageAsync(message);
+            await _conversationRepository.UpdateLastMessageTimeAsync(conversationId, DateTime.UtcNow);
 
-            var receiver = await _userRepository.GetUserByIdAsync(receiverId);
-            if (receiver?.Connections != null 
-                && 
-                receiver.Connections.Count != 0)
+            // Get the list of ConnectionIds of all members in the conversation
+            var participantUserIds = conversation.Participants.Select(p => p.UserId).ToList();
+            var connections = await _userRepository.GetConnectionsByUserIdsAsync(participantUserIds);
+            var connectionIds = connections.Select(c => c.ConnectionId).ToList();
+
+            // Send the message to all members in the conversation
+            if (connectionIds.Any())
             {
-                var connectionIds = receiver.Connections.Select(c => c.ConnectionId).ToList();
                 await Clients.Clients(connectionIds)
-                    .SendAsync("ReceiveMessage", senderId, content);
+                    .SendAsync("ReceiveMessage", conversationId, senderId, content, messageType, message.SendDate);
             }
-
-            await Clients.Caller.SendAsync("ReceiveMessage", senderId, content);
         }
 
         public override async Task OnConnectedAsync()
@@ -43,34 +58,34 @@ namespace ChatService.Application.Hubs
             var token = Context.GetHttpContext()?.Request.Query["access_token"];
             if (string.IsNullOrEmpty(token))
             {
-                throw new HubException("Token không được cung cấp");
+                throw new HubException("Token was not provided");
             }
 
             try
             {
-                // Xác minh token bằng Firebase Admin SDK
+                // Verify token using Firebase Admin SDK
                 var decodedToken = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(token);
                 var uid = decodedToken.Uid;
-                Console.WriteLine($"Người dùng đã kết nối với UID: {uid}");
+                Console.WriteLine($"User connected with UID: {uid}");
 
-                // Logic bổ sung (ví dụ: lưu thông tin kết nối vào cơ sở dữ liệu)
-                var user = await _userRepository.GetUserByFirebaseUid(uid); 
+                // Save connection information
+                var user = await _userRepository.GetUserByFirebaseUidAsync(uid);
                 if (user != null)
                 {
                     await _userRepository.AddConnectionIdAsync(user.Id, Context.ConnectionId);
-                    Console.WriteLine($"ConnectionId {Context.ConnectionId} được gán cho user {uid}");
+                    Console.WriteLine($"ConnectionId {Context.ConnectionId} assigned to user {uid}");
                 }
                 else
                 {
-                    Console.WriteLine($"Không tìm thấy user với UID: {uid}");
+                    Console.WriteLine($"User not found with UID: {uid}");
                 }
 
                 await base.OnConnectedAsync();
             }
             catch (FirebaseAuthException ex)
             {
-                Console.WriteLine($"Xác minh token thất bại: {ex.Message}");
-                throw new HubException("Token không hợp lệ");
+                Console.WriteLine($"Token verification failed: {ex.Message}");
+                throw new HubException("Invalid token");
             }
         }
 
@@ -79,13 +94,14 @@ namespace ChatService.Application.Hubs
             var senderUid = Context.User?.FindFirst("user_id")?.Value;
             if (!string.IsNullOrEmpty(senderUid))
             {
-                var user = await _userRepository.GetUserByFirebaseUid(senderUid);
+                var user = await _userRepository.GetUserByFirebaseUidAsync(senderUid);
                 if (user != null)
                 {
                     await _userRepository.RemoveConnectionIdAsync(user.Id, Context.ConnectionId);
-                    Console.WriteLine($"Đã xóa ConnectionId {Context.ConnectionId} khỏi user {senderUid}");
+                    Console.WriteLine($"Removed ConnectionId {Context.ConnectionId} from user {senderUid}");
                 }
             }
+
             await base.OnDisconnectedAsync(exception);
         }
     }
