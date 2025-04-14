@@ -131,6 +131,8 @@ namespace ChatService
                         new string[] {}
                     }
                 });
+
+                options.EnableAnnotations();
             });
 
             var app = builder.Build();
