@@ -1,8 +1,10 @@
-﻿using ChatService.Application.DTOs;
+﻿using ChatService.Controllers.RequestModels;
+using ChatService.Controllers.ResponseModels;
 using ChatService.Core.Interfaces;
 using ChatService.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace ChatService.Controllers
 {
@@ -21,23 +23,10 @@ namespace ChatService.Controllers
         private readonly IChatMessageRepository _chatMessageRepository = chatMessageRepository;
         private readonly IUserRepository _userRepository = userRepository;
 
-        [HttpGet("{userId1}/{userId2}")]
-        public async Task<IActionResult> GetChatHistory(int userId1, int userId2, int pageNumber = 1, int pageSize = 20)
-        {
-            var messages = await _messageRepository.GetMessagesBetweenUsersAsync(userId1, userId2, pageNumber, pageSize);
-            var messageDtos = messages.Select(m => new MessageDto
-            {
-                SenderId = m.SenderId,
-                ReceiverId = m.ReceiverId,
-                Content = m.Content,
-                Timestamp = m.Timestamp,
-                IsRead = m.IsRead
-            });
-            return Ok(messageDtos);
-        }
-
         [HttpGet("conversation/{conversationId}")]
-        public async Task<IActionResult> GetMessages(int conversationId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        [SwaggerOperation(Summary = "Get messages in a conversation")]
+        [ProducesResponseType(typeof(IEnumerable<MessageResponse>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetMessages(int conversationId, [FromQuery] MessageRequest request)
         {
             var userUid = User.FindFirst("user_id")?.Value;
             if (string.IsNullOrEmpty(userUid))
@@ -51,17 +40,17 @@ namespace ChatService.Controllers
             if (conversation == null || !conversation.Participants.Any(p => p.UserId == user.Id))
                 return Forbid("You are not a participant in this conversation");
 
-            var messages = await _chatMessageRepository.GetMessagesByConversationIdAsync(conversationId, page, pageSize);
-            var response = messages.Select(m => new
+            var messages = await _chatMessageRepository.GetMessagesByConversationIdAsync(conversationId, request.Page, request.PageSize);
+            var response = messages.Select(m => new MessageResponse
             {
-                m.ChatMessageId,
-                m.ConversationId,
-                m.UserSendId,
-                SenderUsername = m.Sender?.Username, // Nếu có navigation property
-                m.Message,
-                m.MediaLink,
-                m.Type,
-                m.SendDate
+                ChatMessageId = m.ChatMessageId,
+                ConversationId = m.ConversationId,
+                UserSendId = m.UserSendId,
+                SenderUsername = m.Sender?.Username,
+                Message = m.Message,
+                MediaLink = m.MediaLink,
+                Type = m.Type,
+                SendDate = m.SendDate
             }).ToList();
 
             return Ok(response);

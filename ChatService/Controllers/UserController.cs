@@ -1,4 +1,5 @@
 ﻿using ChatService.Controllers.RequestModels;
+using ChatService.Controllers.ResponseModels;
 using ChatService.Core.Entities;
 using ChatService.Core.Interfaces;
 using ChatService.Infrastructure.Repositories;
@@ -21,12 +22,13 @@ namespace ChatService.Controllers
         private readonly IUserRepository _userRepository = userRepository;
 
         [HttpPost("register")]
-        public async Task<IActionResult> RegisterAsync(string email, string password, string displayName = "")
+        [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status200OK)]
+        public async Task<IActionResult> RegisterAsync([FromBody] RegisterRequest request)
         {
             try
             {
                 // Register the user with Firebase
-                var firebaseUid = await _authenticationService.RegisterAsync(email, password);
+                var firebaseUid = await _authenticationService.RegisterAsync(request.Email, request.Password);
 
                 // Check if the user already exists in the database
                 var existingUser = await _userRepository.GetUserByFirebaseUidAsync(firebaseUid);
@@ -39,12 +41,16 @@ namespace ChatService.Controllers
                 var newUser = new User
                 {
                     FirebaseUid = firebaseUid,
-                    Username = string.IsNullOrEmpty(displayName) ? email.Split('@')[0] : displayName
+                    Username = string.IsNullOrEmpty(request.DisplayName) ? request.Email.Split('@')[0] : request.DisplayName
                 };
 
                 await _userRepository.AddUserAsync(newUser);
 
-                return Ok(new { message = "User registered successfully.", userId = newUser.Id });
+                return Ok(new RegisterResponse
+                {
+                    Message = "User registered successfully.",
+                    UserId = newUser.Id
+                });
             }
             catch (Exception ex)
             {
@@ -53,9 +59,10 @@ namespace ChatService.Controllers
         }
 
         [HttpPost("login")]
+        [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
         public async Task<IActionResult> LoginAsync(LoginRequest loginRequest)
         {
-            var (token, localId) = await _jwtProvider.GetForCredentialsAsync(loginRequest.Email, loginRequest.Password); 
+            var (token, localId) = await _jwtProvider.GetForCredentialsAsync(loginRequest.Email, loginRequest.Password);
             if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(localId))
             {
                 return Unauthorized();
@@ -67,29 +74,17 @@ namespace ChatService.Controllers
                 return Unauthorized("User not found in system");
             }
 
-            return Ok(new
+            return Ok(new LoginResponse
             {
-                token,
-                userId = user.Id,
+                Token = token,
+                UserId = user.Id
             });
         }
 
         [Authorize]
-        [HttpGet("contacts")]
-        public async Task<IActionResult> GetContacts(int userId)
-        {
-            var contacts = await _userRepository.GetContactsAsync(userId);
-            var contactDtos = contacts.Select(c => new
-            {
-                c.Id,
-                c.Username
-            });
-            return Ok(contactDtos);
-        }
-
-        [Authorize]
-        [HttpGet("get-id-by-email")]
-        public async Task<IActionResult> GetUidByEmail(string email)
+        [HttpGet("find-user-by-email")]
+        [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+        public async Task<IActionResult> FindUserByEmail([FromQuery] string email)
         {
             try
             {
@@ -99,7 +94,12 @@ namespace ChatService.Controllers
                 {
                     return NotFound(new { error = "User not found" });
                 }
-                return Ok(user.Id);
+                return Ok(new UserDto
+                {
+                    Id = user.Id,
+                    FirebaseUid = user.FirebaseUid,
+                    Username = user.Username
+                });
             }
             catch (Exception ex)
             {
