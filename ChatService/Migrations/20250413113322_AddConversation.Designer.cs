@@ -3,6 +3,7 @@ using System;
 using ChatService.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ChatService.Migrations
 {
     [DbContext(typeof(ChatDbContext))]
-    partial class ChatDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250413113322_AddConversation")]
+    partial class AddConversation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -60,7 +63,7 @@ namespace ChatService.Migrations
 
                     b.HasIndex("UserSendId");
 
-                    b.ToTable("ChatMessages", (string)null);
+                    b.ToTable("ChatMessages");
                 });
 
             modelBuilder.Entity("ChatService.Core.Entities.Conversation", b =>
@@ -87,7 +90,7 @@ namespace ChatService.Migrations
 
                     b.HasIndex("LastMessageAt");
 
-                    b.ToTable("Conversations", (string)null);
+                    b.ToTable("Conversations");
                 });
 
             modelBuilder.Entity("ChatService.Core.Entities.ConversationParticipant", b =>
@@ -110,7 +113,7 @@ namespace ChatService.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("ConversationParticipants", (string)null);
+                    b.ToTable("ConversationParticipants");
                 });
 
             modelBuilder.Entity("ChatService.Core.Entities.Message", b =>
@@ -143,7 +146,7 @@ namespace ChatService.Migrations
 
                     b.HasIndex("SenderId");
 
-                    b.ToTable("Messages", (string)null);
+                    b.ToTable("Messages");
                 });
 
             modelBuilder.Entity("ChatService.Core.Entities.MessageReadStatus", b =>
@@ -161,7 +164,7 @@ namespace ChatService.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("MessageReadStatuses", (string)null);
+                    b.ToTable("MessageReadStatuses");
                 });
 
             modelBuilder.Entity("ChatService.Core.Entities.User", b =>
@@ -183,7 +186,7 @@ namespace ChatService.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("ChatService.Core.Entities.UserConnection", b =>
@@ -205,7 +208,7 @@ namespace ChatService.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserConnections", (string)null);
+                    b.ToTable("UserConnections");
                 });
 
             modelBuilder.Entity("ChatService.Core.Entities.ChatMessage", b =>

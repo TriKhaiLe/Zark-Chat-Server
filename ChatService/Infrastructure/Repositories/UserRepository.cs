@@ -11,7 +11,7 @@ namespace ChatService.Infrastructure.Repositories
         private readonly ChatDbContext _context = context;
         private readonly FirebaseAuth _firebaseAuth = FirebaseAuth.DefaultInstance;
 
-        public async Task<User> GetUserByFirebaseUid(string firebaseUid)
+        public async Task<User> GetUserByFirebaseUidAsync(string firebaseUid)
         {
             return await _context.Users.FirstOrDefaultAsync(u => u.FirebaseUid == firebaseUid);
         }
@@ -71,6 +71,24 @@ namespace ChatService.Infrastructure.Repositories
 
             return contacts;
         }
+        public async Task<List<UserConnection>> GetConnectionsByUserIdsAsync(List<int> userIds)
+        {
+            return await _context.UserConnections
+                .Where(uc => userIds.Contains(uc.UserId))
+                .ToListAsync();
+        }
 
+        public async Task AddUserAsync(User newUser)
+        {
+            var existingUser = await _context.Users
+                .FirstOrDefaultAsync(u => u.FirebaseUid == newUser.FirebaseUid);
+            if (existingUser != null)
+            {
+                throw new Exception("User already exists in the system.");
+            }
+
+            await _context.Users.AddAsync(newUser);
+            await _context.SaveChangesAsync();
+        }
     }
 }
