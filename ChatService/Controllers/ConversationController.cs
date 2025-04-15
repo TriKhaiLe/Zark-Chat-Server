@@ -14,11 +14,13 @@ namespace ChatService.Controllers
     [Authorize]
     public class ConversationController(
         IConversationRepository conversationRepository,
-        IUserRepository userRepository
+        IUserRepository userRepository,
+        IAuthenticationService authenticationService
         ) : ControllerBase
     {
         private readonly IConversationRepository _conversationRepository = conversationRepository;
         private readonly IUserRepository _userRepository = userRepository;
+        private readonly IAuthenticationService _authenticationService = authenticationService;
 
         [HttpPost("create")]
         [SwaggerOperation(Summary = "Create a new conversation")]
@@ -30,10 +32,12 @@ namespace ChatService.Controllers
                 throw new ArgumentException("CreatorId cannot be in ParticipantIds");
             }
 
+            // get name for conversation
+            var allUserIds = request.ParticipantIds.Append(request.CreatorId).ToList();
             string conversationName = string.Empty;
             if (request.Type == "Private")
             {
-                var otherUserId = request.ParticipantIds.FirstOrDefault(id => id != request.CreatorId);
+                var otherUserId = request.ParticipantIds.FirstOrDefault();
                 if (otherUserId == 0)
                     throw new ArgumentException("Private conversation must have one other participant");
 
@@ -51,24 +55,29 @@ namespace ChatService.Controllers
                 }
                 else
                 {
-                    // Lấy danh sách userId bao gồm creator + participant
-                    var allUserIds = request.ParticipantIds.Append(request.CreatorId).ToList();
                     var users = await _userRepository.GetUsersByIdsAsync(allUserIds);
                     conversationName = string.Join(", ", users.Select(u => u.DisplayName));
                 }
+            }
+
+            // get participants for conversation
+            var participants = new List<ConversationParticipant>();
+            foreach (var userId in allUserIds)
+            {
+                var participant = new ConversationParticipant
+                {
+                    UserId = userId,
+                    Role = (userId == request.CreatorId && request.Type == "Group") ? "Admin" : "Member",
+                    JoinedAt = DateTime.UtcNow
+                };
+                participants.Add(participant);
             }
 
             var conversation = new Conversation
             {
                 Type = request.Type,
                 Name = conversationName,
-                Participants = request.ParticipantIds.Concat(new[] { request.CreatorId })
-                    .Select(userId => new ConversationParticipant
-                    {
-                        UserId = userId,
-                        Role = userId == request.CreatorId && request.Type == "Group" ? "Admin" : "Member",
-                        JoinedAt = DateTime.UtcNow
-                    }).ToList()
+                Participants = participants
             };
 
             await _conversationRepository.AddConversationAsync(conversation);
@@ -99,12 +108,7 @@ namespace ChatService.Controllers
                 Type = c.Type,
                 Name = c.Name,
                 LastMessage = "inconstruction...",
-                LastMessageAt = c.LastMessageAt,
-                Participants = c.Participants.Select(p => new ParticipantDto
-                {
-                    UserId = p.UserId,
-                    DisplayName = p.User.DisplayName
-                }).ToList()
+                LastMessageAt = c.LastMessageAt
             }).ToList();
 
             return Ok(response);
@@ -137,12 +141,85 @@ namespace ChatService.Controllers
                 Type = privateConversation.Type,
                 Name = privateConversation.Name,
                 LastMessage = "inconstruction...",
-                LastMessageAt = privateConversation.LastMessageAt,
-                Participants = privateConversation.Participants.Select(p => new ParticipantDto
+                LastMessageAt = privateConversation.LastMessageAt
+            };
+
+            return Ok(response);
+        }
+
+        [HttpGet("find-conversations-by-name")]
+        [SwaggerOperation(Summary = "Find conversations by name")]
+        [ProducesResponseType(typeof(IEnumerable<ConversationResponse>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> FindConversationsByName([FromQuery] string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return BadRequest("Conversation name cannot be empty");
+
+            var userUid = User.FindFirst("user_id")?.Value;
+            if (string.IsNullOrEmpty(userUid))
+                return Unauthorized("User ID not found in token");
+
+            var currentUser = await _userRepository.GetUserByFirebaseUidAsync(userUid);
+            if (currentUser == null)
+                return NotFound("Current user not found");
+
+            var conversations = await _conversationRepository.GetConversationsByUserIdAsync(currentUser.Id);
+
+            var matchingConversations = conversations
+                .Where(c => c.Name != null && c.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
+                .Select(c => new ConversationResponse
                 {
-                    UserId = p.UserId,
-                    DisplayName = p.User.DisplayName
-                }).ToList()
+                    ConversationId = c.ConversationId,
+                    Type = c.Type,
+                    Name = c.Name,
+                    LastMessage = "inconstruction...",
+                    LastMessageAt = c.LastMessageAt
+                }).ToList();
+
+            return Ok(matchingConversations);
+        }
+
+        [HttpGet("find-private-conversation-by-email")]
+        [SwaggerOperation(
+            Summary = "Find a private conversation by user email", 
+            Description = "Use to find a conversation with a new user or existing user by email")]
+        [ProducesResponseType(typeof(ConversationResponse), StatusCodes.Status200OK)]
+        public async Task<IActionResult?> FindPrivateConversationByEmail([FromQuery] string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return BadRequest("Email cannot be empty");
+
+            var userUid = User.FindFirst("user_id")?.Value;
+            if (string.IsNullOrEmpty(userUid))
+                return Unauthorized("User ID not found in token");
+
+            var currentUser = await _userRepository.GetUserByFirebaseUidAsync(userUid);
+            if (currentUser == null)
+                return NotFound("Current user not found");
+
+            string uid = await _authenticationService.GetUidByEmailAsync(email);
+            var targetUser = await _userRepository.GetUserByFirebaseUidAsync(uid);
+            if (targetUser == null)
+                return NotFound("User with the given email not found");
+
+            var conversations = await _conversationRepository.GetConversationsByUserIdAsync(currentUser.Id);
+
+            if (conversations == null)
+                return NotFound("No conversations found for the current user");
+
+            var privateConversation = conversations.FirstOrDefault(c => c.Type == "Private" &&
+                c.Participants.Any(p => p.UserId == targetUser.Id));
+
+            if (privateConversation == null)
+                return NotFound("Private conversation not found");
+
+            var response = new ConversationResponse
+            {
+                ConversationId = privateConversation.ConversationId,
+                Type = privateConversation.Type,
+                Name = privateConversation.Name,
+                LastMessage = "inconstruction...",
+                LastMessageAt = privateConversation.LastMessageAt
             };
 
             return Ok(response);

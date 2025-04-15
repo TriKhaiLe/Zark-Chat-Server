@@ -2,11 +2,10 @@
 {
     internal class ConversationResponse
     {
-        public int ConversationId { get; set; }
+        public int? ConversationId { get; set; }
         public string Type { get; set; }
         public string Name { get; set; }
         public string? LastMessage { get; set; }
         public DateTime? LastMessageAt { get; set; }
-        public List<ParticipantDto> Participants { get; set; }
     }
 }
