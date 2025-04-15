@@ -23,7 +23,7 @@ namespace ChatService.Controllers
         private readonly IChatMessageRepository _chatMessageRepository = chatMessageRepository;
         private readonly IUserRepository _userRepository = userRepository;
 
-        [HttpGet("conversation/{conversationId}")]
+        [HttpGet("{conversationId}")]
         [SwaggerOperation(Summary = "Get messages in a conversation")]
         [ProducesResponseType(typeof(IEnumerable<MessageResponse>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetMessages(int conversationId, [FromQuery] MessageRequest request)

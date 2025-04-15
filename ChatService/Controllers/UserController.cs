@@ -14,7 +14,10 @@ namespace ChatService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class UserController(IAuthenticationService authenticationService, IJwtProvider jwtProvider, IUserRepository userRepository)
+    public class UserController(
+        IAuthenticationService authenticationService, 
+        IJwtProvider jwtProvider, 
+        IUserRepository userRepository)
         : ControllerBase
     {
         private readonly IAuthenticationService _authenticationService = authenticationService;
@@ -106,56 +109,6 @@ namespace ChatService.Controllers
                 {
                     return NotFound(new { error = ex.Message });
                 }
-                return StatusCode(500, new { error = ex.Message });
-            }
-        }
-
-        [Authorize]
-        [HttpGet("find-user-by-email-or-name")]
-        [ProducesResponseType(typeof(IEnumerable<UserDto>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> FindUserByEmailOrName([FromQuery] string query)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(query))
-                {
-                    return BadRequest(new { error = "Query cannot be empty" });
-                }
-
-                // Check if the query is in email format
-                if (query.Contains("@") && query.Contains("."))
-                {
-                    string uid = await _authenticationService.GetUidByEmailAsync(query);
-                    var user = await _userRepository.GetUserByFirebaseUidAsync(uid);
-                    if (user == null)
-                    {
-                        return NotFound(new { error = "User not found" });
-                    }
-                    return Ok(new List<UserDto>
-                    {
-                        new() {
-                            Id = user.Id,
-                            DisplayName = user.DisplayName
-                        }
-                    });
-                }
-
-                var users = await _userRepository.GetUsersByNameAsync(query);
-                if (!users.Any())
-                {
-                    return NotFound(new { error = "No users found with the given name" });
-                }
-
-                var response = users.Select(user => new UserDto
-                {
-                    Id = user.Id,
-                    DisplayName = user.DisplayName
-                }).ToList();
-
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
                 return StatusCode(500, new { error = ex.Message });
             }
         }
