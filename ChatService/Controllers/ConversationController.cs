@@ -114,46 +114,16 @@ namespace ChatService.Controllers
             return Ok(response);
         }
 
-        [HttpGet("private-conversation")]
-        [SwaggerOperation(Summary = "Find a private conversation by user ID")]
-        [ProducesResponseType(typeof(ConversationResponse), StatusCodes.Status200OK)]
-        public async Task<IActionResult> FindPrivateConversation([FromQuery] int userId)
+        [HttpGet("search")]
+        [SwaggerOperation(
+            Summary = "Search conversations by name or email",
+            Description = "Searches for conversations by name (group or private) or finds/creates private conversation by email"
+        )]
+        [ProducesResponseType(typeof(IEnumerable<SearchResultResponse>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> SearchConversations([FromQuery] string query)
         {
-            var userUid = User.FindFirst("user_id")?.Value;
-            if (string.IsNullOrEmpty(userUid))
-                return Unauthorized("User ID not found in token");
-
-            var currentUser = await _userRepository.GetUserByFirebaseUidAsync(userUid);
-            if (currentUser == null)
-                return NotFound("Current user not found");
-
-            var conversations = await _conversationRepository.GetConversationsByUserIdAsync(currentUser.Id);
-
-            var privateConversation = conversations.FirstOrDefault(c => c.Type == "Private" &&
-                c.Participants.Any(p => p.UserId == userId));
-
-            if (privateConversation == null)
-                return NotFound("Private conversation not found");
-
-            var response = new ConversationResponse
-            {
-                ConversationId = privateConversation.ConversationId,
-                Type = privateConversation.Type,
-                Name = privateConversation.Name,
-                LastMessage = "inconstruction...",
-                LastMessageAt = privateConversation.LastMessageAt
-            };
-
-            return Ok(response);
-        }
-
-        [HttpGet("find-conversations-by-name")]
-        [SwaggerOperation(Summary = "Find conversations by name")]
-        [ProducesResponseType(typeof(IEnumerable<ConversationResponse>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> FindConversationsByName([FromQuery] string name)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-                return BadRequest("Conversation name cannot be empty");
+            if (string.IsNullOrWhiteSpace(query))
+                return BadRequest("Query cannot be empty");
 
             var userUid = User.FindFirst("user_id")?.Value;
             if (string.IsNullOrEmpty(userUid))
@@ -163,66 +133,71 @@ namespace ChatService.Controllers
             if (currentUser == null)
                 return NotFound("Current user not found");
 
-            var conversations = await _conversationRepository.GetConversationsByUserIdAsync(currentUser.Id);
+            var results = new List<SearchResultResponse>();
 
+            // Tìm cuộc trò chuyện theo tên
+            var conversations = await _conversationRepository.GetConversationsByUserIdAsync(currentUser.Id);
             var matchingConversations = conversations
-                .Where(c => c.Name != null && c.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
-                .Select(c => new ConversationResponse
+                .Where(c => c.Name != null && c.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
+                .Select(c => new SearchResultResponse
                 {
                     ConversationId = c.ConversationId,
                     Type = c.Type,
                     Name = c.Name,
-                    LastMessage = "inconstruction...",
-                    LastMessageAt = c.LastMessageAt
+                    IsNew = false
                 }).ToList();
 
-            return Ok(matchingConversations);
-        }
+            results.AddRange(matchingConversations);
 
-        [HttpGet("find-private-conversation-by-email")]
-        [SwaggerOperation(
-            Summary = "Find a private conversation by user email", 
-            Description = "Use to find a conversation with a new user or existing user by email")]
-        [ProducesResponseType(typeof(ConversationResponse), StatusCodes.Status200OK)]
-        public async Task<IActionResult?> FindPrivateConversationByEmail([FromQuery] string email)
-        {
-            if (string.IsNullOrWhiteSpace(email))
-                return BadRequest("Email cannot be empty");
-
-            var userUid = User.FindFirst("user_id")?.Value;
-            if (string.IsNullOrEmpty(userUid))
-                return Unauthorized("User ID not found in token");
-
-            var currentUser = await _userRepository.GetUserByFirebaseUidAsync(userUid);
-            if (currentUser == null)
-                return NotFound("Current user not found");
-
-            string uid = await _authenticationService.GetUidByEmailAsync(email);
-            var targetUser = await _userRepository.GetUserByFirebaseUidAsync(uid);
-            if (targetUser == null)
-                return NotFound("User with the given email not found");
-
-            var conversations = await _conversationRepository.GetConversationsByUserIdAsync(currentUser.Id);
-
-            if (conversations == null)
-                return NotFound("No conversations found for the current user");
-
-            var privateConversation = conversations.FirstOrDefault(c => c.Type == "Private" &&
-                c.Participants.Any(p => p.UserId == targetUser.Id));
-
-            if (privateConversation == null)
-                return NotFound("Private conversation not found");
-
-            var response = new ConversationResponse
+            // Nếu query là email, tìm user và kiểm tra cuộc trò chuyện cá nhân
+            if (query.Contains('@'))
             {
-                ConversationId = privateConversation.ConversationId,
-                Type = privateConversation.Type,
-                Name = privateConversation.Name,
-                LastMessage = "inconstruction...",
-                LastMessageAt = privateConversation.LastMessageAt
-            };
+                try
+                {
+                    string targetUid = await _authenticationService.GetUidByEmailAsync(query);
+                    var targetUser = await _userRepository.GetUserByFirebaseUidAsync(targetUid);
+                    if (targetUser != null && targetUser.Id != currentUser.Id)
+                    {
+                        var privateConversation = conversations.FirstOrDefault(c =>
+                            c.Type == "Private" &&
+                            c.Participants.Any(p => p.UserId == targetUser.Id));
 
-            return Ok(response);
+                        if (privateConversation != null)
+                        {
+                            // Tránh trùng nếu đã tìm thấy qua tên
+                            if (!results.Any(r => r.ConversationId == privateConversation.ConversationId))
+                            {
+                                results.Add(new SearchResultResponse
+                                {
+                                    ConversationId = privateConversation.ConversationId,
+                                    Type = privateConversation.Type,
+                                    Name = privateConversation.Name,
+                                    Avatar = targetUser.AvatarUrl ?? "",
+                                    IsNew = false
+                                });
+                            }
+                        }
+                        else
+                        {
+                            // User mới, đề xuất tạo cuộc trò chuyện
+                            results.Add(new SearchResultResponse
+                            {
+                                UserId = targetUser.Id,
+                                Type = "Private",
+                                Name = targetUser.DisplayName,
+                                Avatar = targetUser.AvatarUrl ?? "",
+                                IsNew = true
+                            });
+                        }
+                    }
+                }
+                catch
+                {
+                    // Email không tồn tại, bỏ qua
+                }
+            }
+
+            return Ok(results);
         }
     }
 }
