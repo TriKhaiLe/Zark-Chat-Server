@@ -99,5 +99,13 @@ namespace ChatService.Infrastructure.Repositories
                 .ToListAsync();
             return users;
         }
+
+        public async Task<List<User>> GetUsersByIdsAsync(List<int> allUserIds)
+        {
+            var users = await _context.Users
+                .Where(u => allUserIds.Contains(u.Id))
+                .ToListAsync();
+            return users;
+        }
     }
 }

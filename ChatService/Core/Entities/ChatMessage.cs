@@ -4,7 +4,7 @@
     {
         public int ConversationId { get; set; }
         public string Type { get; set; } = "Private";
-        public string? Name { get; set; }
+        public string Name { get; set; } = string.Empty;
         public DateTime? LastMessageAt { get; set; }
         public virtual ICollection<ConversationParticipant> Participants { get; set; } = [];
         public virtual ICollection<ChatMessage> Messages { get; set; } = [];

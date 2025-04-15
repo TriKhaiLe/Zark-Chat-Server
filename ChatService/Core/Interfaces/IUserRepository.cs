@@ -12,5 +12,6 @@ namespace ChatService.Core.Interfaces
         Task<List<UserConnection>> GetConnectionsByUserIdsAsync(List<int> userIds);
         Task AddUserAsync(User newUser);
         Task<List<User>> GetUsersByNameAsync(string query);
+        Task<List<User>> GetUsersByIdsAsync(List<int> allUserIds);
     }
 }

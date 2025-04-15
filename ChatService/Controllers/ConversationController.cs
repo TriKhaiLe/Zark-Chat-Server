@@ -30,10 +30,38 @@ namespace ChatService.Controllers
                 throw new ArgumentException("CreatorId cannot be in ParticipantIds");
             }
 
+            string conversationName = string.Empty;
+            if (request.Type == "Private")
+            {
+                var otherUserId = request.ParticipantIds.FirstOrDefault(id => id != request.CreatorId);
+                if (otherUserId == 0)
+                    throw new ArgumentException("Private conversation must have one other participant");
+
+                var otherUser = await _userRepository.GetUserByIdAsync(otherUserId);
+                if (otherUser == null)
+                    throw new ArgumentException("The other participant does not exist");
+
+                conversationName = otherUser.DisplayName;
+            }
+            else if (request.Type == "Group")
+            {
+                if (!string.IsNullOrWhiteSpace(request.Name))
+                {
+                    conversationName = request.Name;
+                }
+                else
+                {
+                    // Lấy danh sách userId bao gồm creator + participant
+                    var allUserIds = request.ParticipantIds.Append(request.CreatorId).ToList();
+                    var users = await _userRepository.GetUsersByIdsAsync(allUserIds);
+                    conversationName = string.Join(", ", users.Select(u => u.DisplayName));
+                }
+            }
+
             var conversation = new Conversation
             {
                 Type = request.Type,
-                Name = request.Type == "Group" ? request.Name : null,
+                Name = conversationName,
                 Participants = request.ParticipantIds.Concat(new[] { request.CreatorId })
                     .Select(userId => new ConversationParticipant
                     {
