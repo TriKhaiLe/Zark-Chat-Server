@@ -90,5 +90,14 @@ namespace ChatService.Infrastructure.Repositories
             await _context.Users.AddAsync(newUser);
             await _context.SaveChangesAsync();
         }
+
+        public async Task<List<User>> GetUsersByNameAsync(string query)
+        {
+            // Search by name (case-insensitive, approximate match)
+            var users = await _context.Users
+                .Where(u => u.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase))
+                .ToListAsync();
+            return users;
+        }
     }
 }

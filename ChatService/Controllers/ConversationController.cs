@@ -75,9 +75,47 @@ namespace ChatService.Controllers
                 Participants = c.Participants.Select(p => new ParticipantDto
                 {
                     UserId = p.UserId,
-                    Username = p.User.Username
+                    DisplayName = p.User.DisplayName
                 }).ToList()
             }).ToList();
+
+            return Ok(response);
+        }
+
+        [HttpGet("private-conversation")]
+        [SwaggerOperation(Summary = "Find a private conversation by user ID")]
+        [ProducesResponseType(typeof(ConversationResponse), StatusCodes.Status200OK)]
+        public async Task<IActionResult> FindPrivateConversation([FromQuery] int userId)
+        {
+            var userUid = User.FindFirst("user_id")?.Value;
+            if (string.IsNullOrEmpty(userUid))
+                return Unauthorized("User ID not found in token");
+
+            var currentUser = await _userRepository.GetUserByFirebaseUidAsync(userUid);
+            if (currentUser == null)
+                return NotFound("Current user not found");
+
+            var conversations = await _conversationRepository.GetConversationsByUserIdAsync(currentUser.Id);
+
+            var privateConversation = conversations.FirstOrDefault(c => c.Type == "Private" &&
+                c.Participants.Any(p => p.UserId == userId));
+
+            if (privateConversation == null)
+                return NotFound("Private conversation not found");
+
+            var response = new ConversationResponse
+            {
+                ConversationId = privateConversation.ConversationId,
+                Type = privateConversation.Type,
+                Name = privateConversation.Name,
+                LastMessage = "inconstruction...",
+                LastMessageAt = privateConversation.LastMessageAt,
+                Participants = privateConversation.Participants.Select(p => new ParticipantDto
+                {
+                    UserId = p.UserId,
+                    DisplayName = p.User.DisplayName
+                }).ToList()
+            };
 
             return Ok(response);
         }
