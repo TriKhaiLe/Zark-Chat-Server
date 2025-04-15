@@ -46,7 +46,7 @@ namespace ChatService.Controllers
                 ChatMessageId = m.ChatMessageId,
                 ConversationId = m.ConversationId,
                 UserSendId = m.UserSendId,
-                SenderUsername = m.Sender?.Username,
+                SenderDisplayName = m.Sender?.DisplayName,
                 Message = m.Message,
                 MediaLink = m.MediaLink,
                 Type = m.Type,
