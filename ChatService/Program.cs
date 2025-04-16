@@ -90,7 +90,6 @@ namespace ChatService
             builder.Services.AddDbContext<ChatDbContext>(options =>
                 options.UseNpgsql(connectionString));
 
-            builder.Services.AddScoped<IMessageRepository, MessageRepository>();
             builder.Services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
             builder.Services.AddScoped<IConversationRepository, ConversationRepository>();
             builder.Services.AddScoped<IUserRepository, UserRepository>();

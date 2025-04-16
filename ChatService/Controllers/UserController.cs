@@ -84,33 +84,5 @@ namespace ChatService.Controllers
             });
         }
 
-        [Authorize]
-        [HttpGet("find-user-by-email")]
-        [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
-        public async Task<IActionResult> FindUserByEmail([FromQuery] string email)
-        {
-            try
-            {
-                string uid = await _authenticationService.GetUidByEmailAsync(email);
-                var user = await _userRepository.GetUserByFirebaseUidAsync(uid);
-                if (user == null)
-                {
-                    return NotFound(new { error = "User not found" });
-                }
-                return Ok(new UserDto
-                {
-                    Id = user.Id,
-                    DisplayName = user.DisplayName
-                });
-            }
-            catch (Exception ex)
-            {
-                if (ex.Message.Contains("not found"))
-                {
-                    return NotFound(new { error = ex.Message });
-                }
-                return StatusCode(500, new { error = ex.Message });
-            }
-        }
     }
 }

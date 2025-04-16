@@ -12,13 +12,11 @@ namespace ChatService.Controllers
     [Route("api/[controller]")]
     [Authorize]
     public class MessagesController(
-        IMessageRepository messageRepository,
         IChatMessageRepository chatMessageRepository,
         IConversationRepository conversationRepository,
         IUserRepository userRepository
         ) : ControllerBase
     {
-        private readonly IMessageRepository _messageRepository = messageRepository;
         private readonly IConversationRepository _conversationRepository = conversationRepository;
         private readonly IChatMessageRepository _chatMessageRepository = chatMessageRepository;
         private readonly IUserRepository _userRepository = userRepository;
