@@ -22,11 +22,12 @@ namespace ChatService
 
             builder.Services.AddCors(options =>
             {
-                options.AddDefaultPolicy(policy =>
+                options.AddPolicy("AllowChatClient", builder =>
                 {
-                    policy.AllowAnyOrigin()
-                          .AllowAnyMethod()
-                          .AllowAnyHeader();
+                    builder.WithOrigins("http://127.0.0.1:5500") 
+                           .AllowAnyMethod()
+                           .AllowAnyHeader()
+                           .AllowCredentials(); // Quan trọng cho SignalR
                 });
             });
 
@@ -142,7 +143,7 @@ namespace ChatService
             });
 
             app.UseRouting();
-            app.UseCors(); // dùng default policy
+            app.UseCors("AllowChatClient");
             app.UseAuthentication();
             app.UseAuthorization();
 
