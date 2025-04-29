@@ -24,7 +24,9 @@ namespace ChatService
             {
                 options.AddPolicy("AllowChatClient", builder =>
                 {
-                    builder.WithOrigins("http://127.0.0.1:5500") 
+                    builder.WithOrigins(
+                        "http://127.0.0.1:5500",
+                        "https://zark-chat-web-client.vercel.app") 
                            .AllowAnyMethod()
                            .AllowAnyHeader()
                            .AllowCredentials(); // Quan trọng cho SignalR
