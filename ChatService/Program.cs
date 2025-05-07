@@ -4,6 +4,8 @@ using ChatService.Core.Interfaces;
 using ChatService.Infrastructure.Authentication;
 using ChatService.Infrastructure.Data;
 using ChatService.Infrastructure.Repositories;
+using ChatService.Model;
+using ChatService.Services.Email;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -93,6 +95,10 @@ namespace ChatService
             builder.Services.AddScoped<IConversationRepository, ConversationRepository>();
             builder.Services.AddScoped<IUserRepository, UserRepository>();
             builder.Services.AddSingleton<IAuthenticationService, AuthenticationService>();
+            builder.Services.AddMemoryCache();
+
+            builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+            builder.Services.AddTransient<IEmailService, EmailService>();
 
             builder.Services.AddSignalR();
 

@@ -7,6 +7,7 @@
         public string FirebaseUid { get; set; } = string.Empty;
         public string? AvatarUrl { get; set; }
         public List<UserConnection> Connections { get; set; } = new List<UserConnection>();
+        public bool IsValidAccount { get; set; } = false;
     }
 
     public class UserConnection

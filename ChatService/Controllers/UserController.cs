@@ -72,17 +72,17 @@ namespace ChatService.Controllers
             }
 
             var user = await userRepository.GetUserByFirebaseUidAsync(localId);
+            
             if (user == null)
             {
                 return Unauthorized("User not found in system");
             }
-
+            
             return Ok(new LoginResponse
             {
                 Token = token,
                 UserId = user.Id
             });
         }
-
     }
 }
