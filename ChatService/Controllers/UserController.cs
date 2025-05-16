@@ -2,12 +2,15 @@
 using ChatService.Controllers.ResponseModels;
 using ChatService.Core.Entities;
 using ChatService.Core.Interfaces;
+using ChatService.Helper;
 using ChatService.Infrastructure.Repositories;
 using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
+using System.ComponentModel;
 using System.Security.Claims;
 
 namespace ChatService.Controllers
@@ -30,11 +33,38 @@ namespace ChatService.Controllers
         {
             try
             {
+                // Validate user account
+                var email = request.Email;
+                var password = request.Password;
+                var displayName = request.DisplayName;
+
+                if (displayName == null)
+                {
+                    return BadRequest(new { message = "Name must not be empty." });
+                }
+
+                if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
+                {
+                    return BadRequest(new { message = "Email and password must not be empty." });
+                }
+
+                var errors = AuthValidation.ValidatePassword(request.Password);
+
+                if (errors.Any())
+                {
+                    return BadRequest(new
+                    {
+                        message = "Invalid password.",
+                        errors
+                    });
+                }
+
                 // Register the user with Firebase
                 var firebaseUid = await _authenticationService.RegisterAsync(request.Email, request.Password);
 
                 // Check if the user already exists in the database
                 var existingUser = await _userRepository.GetUserByFirebaseUidAsync(firebaseUid);
+
                 if (existingUser != null)
                 {
                     return Conflict(new { message = "User already exists in the system." });
@@ -77,7 +107,8 @@ namespace ChatService.Controllers
                 return Ok(new { message = "Emails updated successfully." });
 
             }
-            catch (Exception ex) { 
+            catch (Exception ex)
+            {
                 return BadRequest(ex.Message);
             }
         }
