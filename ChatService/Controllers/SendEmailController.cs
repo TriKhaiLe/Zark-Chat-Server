@@ -21,7 +21,7 @@ namespace ChatService.Controllers
   
 
         [HttpPost("send-otp")]
-        public async Task<IActionResult> SendOtp([FromBody] string email)
+        public async Task<IActionResult> SendOtp([FromQuery] string email)
         {
             // 1. Kiểm tra nếu email này đã gửi gần đây
             var rateLimitKey = $"OTP_RATE_{email}";
