@@ -15,8 +15,8 @@ namespace ChatService.Controllers
     [Route("api/[controller]")]
     [ApiController]
     public class UserController(
-        IAuthenticationService authenticationService, 
-        IJwtProvider jwtProvider, 
+        IAuthenticationService authenticationService,
+        IJwtProvider jwtProvider,
         IUserRepository userRepository)
         : ControllerBase
     {
@@ -44,6 +44,7 @@ namespace ChatService.Controllers
                 var newUser = new User
                 {
                     FirebaseUid = firebaseUid,
+                    Email = request.Email,
                     DisplayName = string.IsNullOrEmpty(request.DisplayName) ? request.Email.Split('@')[0] : request.DisplayName
                 };
 
@@ -61,6 +62,27 @@ namespace ChatService.Controllers
             }
         }
 
+        [HttpPost("syncData")]
+        public async Task<IActionResult> SyncEmail()
+        {
+            try
+            {
+                var userList = await _authenticationService.SyncEmailAsync();
+
+                foreach (var user in userList)
+                {
+                    // Ví dụ update email theo uid
+                    await _userRepository.UpdateEmailUserAsync(user.Email, user.Uid);
+                }
+                return Ok(new { message = "Emails updated successfully." });
+
+            }
+            catch (Exception ex) { 
+                return BadRequest(ex.Message);
+            }
+        }
+
+
         [HttpPost("login")]
         [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
         public async Task<IActionResult> LoginAsync(LoginRequest loginRequest)
@@ -71,10 +93,19 @@ namespace ChatService.Controllers
                 return Unauthorized();
             }
 
-            var user = await userRepository.GetUserByFirebaseUidAsync(localId);
+            var user = await _userRepository.GetUserByFirebaseUidAsync(localId);
+
             if (user == null)
             {
                 return Unauthorized("User not found in system");
+            }
+
+            if (!user.IsValidAccount)
+            {
+                return StatusCode(403, new
+                {
+                    error = "Account is invalid, please verify to continue."
+                });
             }
 
             return Ok(new LoginResponse
@@ -83,6 +114,5 @@ namespace ChatService.Controllers
                 UserId = user.Id
             });
         }
-
     }
 }

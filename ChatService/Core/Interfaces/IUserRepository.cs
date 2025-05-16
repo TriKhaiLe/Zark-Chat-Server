@@ -13,5 +13,7 @@ namespace ChatService.Core.Interfaces
         Task AddUserAsync(User newUser);
         Task<List<User>> GetUsersByNameAsync(string query);
         Task<List<User>> GetUsersByIdsAsync(List<int> allUserIds);
+        Task UpdateValidationAccount(string email);
+        Task UpdateEmailUserAsync(string email, string firebaseUid);
     }
 }
