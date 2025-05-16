@@ -4,16 +4,23 @@ using MailKit.Net.Smtp;
 using MailKit.Security;
 using MimeKit;
 using MimeKit.Text;
+using ChatService.Infrastructure.Data;
+using FirebaseAdmin.Auth;
+using Microsoft.EntityFrameworkCore;
 
 namespace ChatService.Services.Email
 {
     public class EmailService : IEmailService
     {
         private readonly EmailSettings _emailSettings;
+        private readonly FirebaseAuth _firebaseAuth;
+        private readonly ChatDbContext _context;
 
-        public EmailService(IOptions<EmailSettings> emailSettings)
+        public EmailService(IOptions<EmailSettings> emailSettings, ChatDbContext context)
         {
             _emailSettings = emailSettings.Value;
+            _firebaseAuth = FirebaseAuth.DefaultInstance;
+            _context = context;
         }
 
         public async Task SendEmailAsync(string toEmail, string subject, string body)
