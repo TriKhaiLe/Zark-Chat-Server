@@ -1,9 +1,13 @@
-﻿using ChatService.Core.Interfaces;
+﻿using ChatService.Controllers;
+using ChatService.Core.Entities;
+using ChatService.Core.Interfaces;
+using ChatService.Infrastructure.Data;
 using FirebaseAdmin.Auth;
+using Microsoft.EntityFrameworkCore;
 
 namespace ChatService.Infrastructure.Authentication
 {
-    internal sealed class AuthenticationService : IAuthenticationService
+    public sealed class AuthenticationService : IAuthenticationService
     {
         private readonly FirebaseAuth _firebaseAuth;
 
@@ -11,6 +15,7 @@ namespace ChatService.Infrastructure.Authentication
         {
             _firebaseAuth = FirebaseAuth.DefaultInstance;
         }
+
         public async Task<string> RegisterAsync(string email, string password)
         {
             var userArgs = new UserRecordArgs
@@ -27,9 +32,7 @@ namespace ChatService.Infrastructure.Authentication
             try
             {
                 if (string.IsNullOrEmpty(email))
-                {
                     throw new ArgumentException("Email cannot be null or empty", nameof(email));
-                }
 
                 UserRecord userRecord = await _firebaseAuth.GetUserByEmailAsync(email);
                 return userRecord.Uid;
@@ -37,11 +40,30 @@ namespace ChatService.Infrastructure.Authentication
             catch (FirebaseAuthException ex)
             {
                 if (ex.AuthErrorCode == AuthErrorCode.UserNotFound)
-                {
                     throw new Exception($"User with email {email} not found");
-                }
+
                 throw new Exception($"Firebase authentication error: {ex.Message}");
             }
         }
+
+        public async Task<List<FirebaseDto>> SyncEmailAsync()
+        {
+            var userList = new List<FirebaseDto>();
+            var pagedEnumerable = _firebaseAuth.ListUsersAsync(null);
+
+            await foreach (var user in pagedEnumerable)
+            {
+                if (!string.IsNullOrEmpty(user.Email))
+                {
+                    userList.Add(new FirebaseDto
+                    {
+                        Email = user.Email,
+                        Uid = user.Uid,
+                    });
+                }   
+            }
+            return userList;
+        }
+
     }
 }
