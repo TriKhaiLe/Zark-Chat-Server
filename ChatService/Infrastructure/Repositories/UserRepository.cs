@@ -9,7 +9,6 @@ namespace ChatService.Infrastructure.Repositories
     public class UserRepository(ChatDbContext context) : IUserRepository
     {
         private readonly ChatDbContext _context = context;
-        private readonly FirebaseAuth _firebaseAuth = FirebaseAuth.DefaultInstance;
 
         public async Task<User> GetUserByFirebaseUidAsync(string firebaseUid)
         {
@@ -106,6 +105,27 @@ namespace ChatService.Infrastructure.Repositories
                 .Where(u => allUserIds.Contains(u.Id))
                 .ToListAsync();
             return users;
+        }
+
+        public async Task UpdateValidationAccount(string email)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+            if (user != null )
+            {
+                user.IsValidAccount = true;
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task UpdateEmailUserAsync(string email, string firebaseUid)
+        {
+            var user = await GetUserByFirebaseUidAsync(firebaseUid);
+
+            if (user != null)
+            {
+                user.Email = email;
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }

@@ -1,5 +1,8 @@
 ﻿using ChatService.Controllers.RequestModels;
+using ChatService.Core.Interfaces;
 using ChatService.Helper;
+using ChatService.Infrastructure.Authentication;
+using ChatService.Infrastructure.Repositories;
 using ChatService.Services.Email;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
@@ -10,16 +13,12 @@ namespace ChatService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class SendEmailController : ControllerBase
+    public class SendEmailController(IUserRepository userRepository, IEmailService emailService, IMemoryCache cache) : ControllerBase
     {
-        private readonly IMemoryCache _cache;
-        private readonly IEmailService _emailService;
-
-        public SendEmailController(IEmailService emailService, IMemoryCache cache)
-        {
-            _emailService = emailService;
-            _cache = cache;
-        }
+        private readonly IMemoryCache _cache = cache;
+        private readonly IEmailService _emailService = emailService;
+        private readonly IUserRepository _userRepository = userRepository;
+  
 
         [HttpPost("send-otp")]
         public async Task<IActionResult> SendOtp([FromBody] string email)
@@ -46,13 +45,14 @@ namespace ChatService.Controllers
         }
 
         [HttpPost("verify-otp")]
-        public IActionResult VerifyOtp([FromBody] OtpRequest request)
+        public async Task<IActionResult> VerifyOtp([FromBody] OtpRequest request)
         {
             if (_cache.TryGetValue($"OTP_{request.Email}", out string cachedOtp))
             {
                 if (cachedOtp == request.Otp)
                 {
                     _cache.Remove($"OTP_{request.Email}"); // Xác thực xong thì xóa
+                    await _userRepository.UpdateValidationAccount(request.Email);
                     return Ok(new { message = "Verify email successfully!" });
                 }
                 return BadRequest(new { message = "Your OTP is wrong." });
@@ -60,6 +60,5 @@ namespace ChatService.Controllers
 
             return BadRequest(new { message = "OTP has expired or not exists." });
         }
-
     }
 }
