@@ -38,26 +38,26 @@ namespace ChatService.Controllers
                 var password = request.Password;
                 var displayName = request.DisplayName;
 
-                if (displayName == null)
-                {
-                    return BadRequest(new { message = "Name must not be empty." });
-                }
+                //if (displayName == null)
+                //{
+                //    return BadRequest(new { message = "Name must not be empty." });
+                //}
 
-                if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
-                {
-                    return BadRequest(new { message = "Email and password must not be empty." });
-                }
+                //if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
+                //{
+                //    return BadRequest(new { message = "Email and password must not be empty." });
+                //}
 
-                var errors = AuthValidation.ValidatePassword(request.Password);
+                //var errors = AuthValidation.ValidatePassword(request.Password);
 
-                if (errors.Any())
-                {
-                    return BadRequest(new
-                    {
-                        message = "Invalid password.",
-                        errors
-                    });
-                }
+                //if (errors.Any())
+                //{
+                //    return BadRequest(new
+                //    {
+                //        message = "Invalid password.",
+                //        errors
+                //    });
+                //}
 
                 // Register the user with Firebase
                 var firebaseUid = await _authenticationService.RegisterAsync(request.Email, request.Password);
@@ -131,13 +131,13 @@ namespace ChatService.Controllers
                 return Unauthorized("User not found in system");
             }
 
-            if (!user.IsValidAccount)
-            {
-                return StatusCode(403, new
-                {
-                    error = "Account is invalid, please verify to continue."
-                });
-            }
+            //if (!user.IsValidAccount)
+            //{
+            //    return StatusCode(403, new
+            //    {
+            //        error = "Account is invalid, please verify to continue."
+            //    });
+            //}
 
             return Ok(new LoginResponse
             {
