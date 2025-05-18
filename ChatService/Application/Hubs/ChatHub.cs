@@ -53,6 +53,38 @@ namespace ChatService.Application.Hubs
             }
         }
 
+        public async Task Typing(int conversationId, int senderId)
+        {
+            var conversation = await _conversationRepository.GetConversationByIdAsync(conversationId);
+            if (conversation == null)
+            {
+                throw new HubException("Conversation does not exist");
+            }
+
+            var isParticipant = conversation.Participants.Any(p => p.UserId == senderId);
+            if (!isParticipant)
+            {
+                throw new HubException("User does not belong to this conversation");
+            }
+
+            var participantUserIds = conversation.Participants.Select(p => p.UserId).Where(id => id != senderId).ToList();
+            var connections = await _userRepository.GetConnectionsByUserIdsAsync(participantUserIds);
+            var connectionIds = connections.Select(c => c.ConnectionId).ToList();
+
+            // get name of sender
+            var sender = await _userRepository.GetUserByIdAsync(senderId);
+            if (sender == null)
+            {
+                throw new HubException("Sender does not exist");
+            }
+
+            if (connectionIds.Any())
+            {
+                await Clients.Clients(connectionIds)
+                    .SendAsync("UserTyping", conversationId, sender.DisplayName, sender.AvatarUrl);
+            }
+        }
+
         public override async Task OnConnectedAsync()
         {
             var token = Context.GetHttpContext()?.Request.Query["access_token"];
