@@ -13,7 +13,7 @@ namespace ChatService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class SendEmailController(IUserRepository userRepository, IEmailService emailService, IMemoryCache cache) : ControllerBase
+    public class EmailController(IUserRepository userRepository, IEmailService emailService, IMemoryCache cache) : ControllerBase
     {
         private readonly IMemoryCache _cache = cache;
         private readonly IEmailService _emailService = emailService;
