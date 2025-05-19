@@ -114,6 +114,34 @@ namespace ChatService.Migrations
                     b.ToTable("ConversationParticipants");
                 });
 
+            modelBuilder.Entity("ChatService.Core.Entities.Event", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CreatorId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("EndTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Events");
+                });
+
             modelBuilder.Entity("ChatService.Core.Entities.MessageReadStatus", b =>
                 {
                     b.Property<int>("ChatMessageId")
@@ -130,6 +158,29 @@ namespace ChatService.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("MessageReadStatuses");
+                });
+
+            modelBuilder.Entity("ChatService.Core.Entities.Participant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("EventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventId");
+
+                    b.ToTable("Participants");
                 });
 
             modelBuilder.Entity("ChatService.Core.Entities.User", b =>
@@ -243,6 +294,13 @@ namespace ChatService.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("ChatService.Core.Entities.Participant", b =>
+                {
+                    b.HasOne("ChatService.Core.Entities.Event", null)
+                        .WithMany("Participants")
+                        .HasForeignKey("EventId");
+                });
+
             modelBuilder.Entity("ChatService.Core.Entities.UserConnection", b =>
                 {
                     b.HasOne("ChatService.Core.Entities.User", "User")
@@ -263,6 +321,11 @@ namespace ChatService.Migrations
                 {
                     b.Navigation("Messages");
 
+                    b.Navigation("Participants");
+                });
+
+            modelBuilder.Entity("ChatService.Core.Entities.Event", b =>
+                {
                     b.Navigation("Participants");
                 });
 

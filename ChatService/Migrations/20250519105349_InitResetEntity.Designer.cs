@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ChatService.Migrations
 {
     [DbContext(typeof(ChatDbContext))]
-    [Migration("20250415142830_SetConversationNameNotNullable")]
-    partial class SetConversationNameNotNullable
+    [Migration("20250519105349_InitResetEntity")]
+    partial class InitResetEntity
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -117,37 +117,32 @@ namespace ChatService.Migrations
                     b.ToTable("ConversationParticipants");
                 });
 
-            modelBuilder.Entity("ChatService.Core.Entities.Message", b =>
+            modelBuilder.Entity("ChatService.Core.Entities.Event", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CreatorId")
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Content")
+                    b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("ReceiverId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("SenderId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("Timestamp")
+                    b.Property<DateTime>("EndTime")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ReceiverId");
-
-                    b.HasIndex("SenderId");
-
-                    b.ToTable("Messages");
+                    b.ToTable("Events");
                 });
 
             modelBuilder.Entity("ChatService.Core.Entities.MessageReadStatus", b =>
@@ -168,6 +163,29 @@ namespace ChatService.Migrations
                     b.ToTable("MessageReadStatuses");
                 });
 
+            modelBuilder.Entity("ChatService.Core.Entities.Participant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("EventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventId");
+
+                    b.ToTable("Participants");
+                });
+
             modelBuilder.Entity("ChatService.Core.Entities.User", b =>
                 {
                     b.Property<int>("Id")
@@ -176,14 +194,24 @@ namespace ChatService.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AvatarUrl")
+                        .HasColumnType("text");
+
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("FirebaseUid")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<bool>("IsValidAccount")
+                        .HasColumnType("boolean");
 
                     b.HasKey("Id");
 
@@ -250,25 +278,6 @@ namespace ChatService.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("ChatService.Core.Entities.Message", b =>
-                {
-                    b.HasOne("ChatService.Core.Entities.User", "Receiver")
-                        .WithMany("ReceivedMessages")
-                        .HasForeignKey("ReceiverId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("ChatService.Core.Entities.User", "Sender")
-                        .WithMany("SentMessages")
-                        .HasForeignKey("SenderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Receiver");
-
-                    b.Navigation("Sender");
-                });
-
             modelBuilder.Entity("ChatService.Core.Entities.MessageReadStatus", b =>
                 {
                     b.HasOne("ChatService.Core.Entities.ChatMessage", "Message")
@@ -286,6 +295,13 @@ namespace ChatService.Migrations
                     b.Navigation("Message");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ChatService.Core.Entities.Participant", b =>
+                {
+                    b.HasOne("ChatService.Core.Entities.Event", null)
+                        .WithMany("Participants")
+                        .HasForeignKey("EventId");
                 });
 
             modelBuilder.Entity("ChatService.Core.Entities.UserConnection", b =>
@@ -311,13 +327,14 @@ namespace ChatService.Migrations
                     b.Navigation("Participants");
                 });
 
+            modelBuilder.Entity("ChatService.Core.Entities.Event", b =>
+                {
+                    b.Navigation("Participants");
+                });
+
             modelBuilder.Entity("ChatService.Core.Entities.User", b =>
                 {
                     b.Navigation("Connections");
-
-                    b.Navigation("ReceivedMessages");
-
-                    b.Navigation("SentMessages");
                 });
 #pragma warning restore 612, 618
         }
