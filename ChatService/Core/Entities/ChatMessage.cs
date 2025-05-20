@@ -31,6 +31,7 @@
         public string? Message { get; set; }
         public string? MediaLink { get; set; }
         public string Type { get; set; }
+        public string Status { get; set; }
         public virtual ICollection<MessageReadStatus> ReadStatuses { get; set; }
     }
 

@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.SignalR;
 using FirebaseAdmin.Auth;
 using ChatService.Core.Interfaces;
+using FirebaseAdmin.Messaging;
 
 namespace ChatService.Application.Hubs
 {
@@ -34,7 +35,8 @@ namespace ChatService.Application.Hubs
                 UserSendId = senderId,
                 Message = content,
                 Type = messageType,
-                SendDate = DateTime.UtcNow
+                SendDate = DateTime.UtcNow,
+                Status = "Sent"
             };
 
             await _messageRepository.AddMessageAsync(message);
@@ -44,12 +46,56 @@ namespace ChatService.Application.Hubs
             var participantUserIds = conversation.Participants.Select(p => p.UserId).ToList();
             var connections = await _userRepository.GetConnectionsByUserIdsAsync(participantUserIds);
             var connectionIds = connections.Select(c => c.ConnectionId).ToList();
+            var onlineUserIds = connections.Select(c => c.UserId).Distinct().ToList();
 
             // Send the message to all members in the conversation
             if (connectionIds.Any())
             {
                 await Clients.Clients(connectionIds)
-                    .SendAsync("ReceiveMessage", conversationId, senderId, content, messageType, message.SendDate);
+                    .SendAsync("ReceiveMessage", conversationId, senderId, content, messageType, message.SendDate, message.Status, message.ChatMessageId);
+
+                // Mark as Received for online recipients
+                var recipientConnectionIds = connections
+                    .Where(c => c.UserId != senderId)
+                    .Select(c => c.ConnectionId)
+                    .ToList();
+                if (recipientConnectionIds.Any())
+                {
+                    await _messageRepository.UpdateMessageStatusAsync(message.ChatMessageId, "Received");
+                    await Clients.Clients(recipientConnectionIds)
+                        .SendAsync("UpdateMessageStatus", message.ChatMessageId, "Received");
+                }
+            }
+
+            // Send push notifications to offline users
+            var offlineUserIds = participantUserIds
+                .Where(id => id != senderId && !onlineUserIds.Contains(id))
+                .ToList();
+            if (offlineUserIds.Any())
+            {
+                var fcmTokens = await _userRepository.GetFcmTokensByUserIdsAsync(offlineUserIds);
+                if (fcmTokens.Any())
+                {
+                    // Lấy displayName của sender
+                    var sender = await _userRepository.GetUserByIdAsync(senderId);
+                    var senderName = sender?.DisplayName ?? $"User {senderId}";
+                    var fcmMessage = new MulticastMessage
+                    {
+                        Tokens = fcmTokens,
+                        Notification = new Notification
+                        {
+                            Title = senderName,
+                            Body = content
+                        },
+                        Data = new Dictionary<string, string>
+                        {
+                            { "conversationId", conversationId.ToString() },
+                            { "messageId", message.ChatMessageId.ToString() },
+                            { "senderId", senderId.ToString() }
+                        }
+                    };
+                    await FirebaseMessaging.DefaultInstance.SendEachForMulticastAsync(fcmMessage);
+                }
             }
         }
 
