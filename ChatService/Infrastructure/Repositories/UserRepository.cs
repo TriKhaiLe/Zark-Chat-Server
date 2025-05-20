@@ -127,5 +127,56 @@ namespace ChatService.Infrastructure.Repositories
                 await _context.SaveChangesAsync();
             }
         }
+
+        public async Task AddFcmTokenAsync(int userId, string fcmToken)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null)
+            {
+                throw new ArgumentException("User not found", nameof(userId));
+            }
+
+            var existingDevice = await _context.UserDevices
+                .FirstOrDefaultAsync(d => d.UserId == userId && d.FcmToken == fcmToken);
+
+            if (existingDevice != null)
+            {
+                // Update timestamp to keep token fresh
+                existingDevice.LastUpdated = DateTime.UtcNow;
+            }
+            else
+            {
+                // Add new device token
+                var newDevice = new UserDevice
+                {
+                    UserId = userId,
+                    FcmToken = fcmToken,
+                    LastUpdated = DateTime.UtcNow
+                };
+                _context.UserDevices.Add(newDevice);
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<List<string?>> GetFcmTokensByUserIdsAsync(List<int> userIds)
+        {
+            var tokens = await _context.UserDevices
+                .Where(d => userIds.Contains(d.UserId))
+                .Select(d => d.FcmToken)
+                .ToListAsync();
+            return tokens;
+        }
+
+        public async Task RemoveAllFcmTokensAsync(int userId)
+        {
+            var devices = await _context.UserDevices.Where(d => d.UserId == userId).ToListAsync();
+            if (devices.Any())
+            {
+                _context.UserDevices.RemoveRange(devices);
+                await _context.SaveChangesAsync();
+            }
+        }
     }
 }

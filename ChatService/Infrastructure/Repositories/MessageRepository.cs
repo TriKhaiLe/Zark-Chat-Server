@@ -30,5 +30,22 @@ namespace ChatService.Infrastructure.Repositories
                 .Take(pageSize)
                 .ToListAsync();
         }
+
+        public Task UpdateMessageStatusAsync(int chatMessageId, string status)
+        {
+
+
+            var message = _context.ChatMessages.Find(chatMessageId);
+            if (message != null)
+            {
+                message.Status = status;
+                _context.ChatMessages.Update(message);
+                return _context.SaveChangesAsync();
+            }
+            else
+            {
+                throw new Exception("Message not found");
+            }
+        }
     }
 }

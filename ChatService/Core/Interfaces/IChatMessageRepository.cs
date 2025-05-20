@@ -6,5 +6,6 @@ namespace ChatService.Core.Interfaces
     {
         Task<ChatMessage> AddMessageAsync(ChatMessage message);
         Task<List<ChatMessage>> GetMessagesByConversationIdAsync(int conversationId, int page, int pageSize);
+        Task UpdateMessageStatusAsync(int chatMessageId, string status);
     }
 }

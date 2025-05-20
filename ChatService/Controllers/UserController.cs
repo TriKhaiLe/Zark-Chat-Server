@@ -131,13 +131,12 @@ namespace ChatService.Controllers
                 return Unauthorized("User not found in system");
             }
 
-            //if (!user.IsValidAccount)
-            //{
-            //    return StatusCode(403, new
-            //    {
-            //        error = "Account is invalid, please verify to continue."
-            //    });
-            //}
+            // Xử lý FCM Token nếu client gửi lên
+            if (!string.IsNullOrEmpty(loginRequest.FcmToken))
+            {
+                await _userRepository.RemoveAllFcmTokensAsync(user.Id);
+                await _userRepository.AddFcmTokenAsync(user.Id, loginRequest.FcmToken);
+            }
 
             return Ok(new LoginResponse
             {

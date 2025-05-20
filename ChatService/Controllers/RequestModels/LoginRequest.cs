@@ -9,5 +9,7 @@ namespace ChatService.Controllers.RequestModels
 
         [DefaultValue("123123")]
         public string Password { get; set; }
+
+        public string? FcmToken { get; set; }
     }
 }

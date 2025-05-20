@@ -18,6 +18,7 @@ namespace ChatService.Infrastructure.Data
         public DbSet<UserConnection> UserConnections { get; set; }
         public DbSet<Event> Events { get; set; }
         public DbSet<Participant> Participants { get; set; }
+        public DbSet<UserDevice> UserDevices { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -26,7 +27,6 @@ namespace ChatService.Infrastructure.Data
             modelBuilder.ApplyConfiguration(new ConversationParticipantConfiguration());
             modelBuilder.ApplyConfiguration(new ChatMessageConfiguration());
             modelBuilder.ApplyConfiguration(new MessageReadStatusConfiguration());
-            modelBuilder.ApplyConfiguration(new UserConfiguration());
         }
     }
 

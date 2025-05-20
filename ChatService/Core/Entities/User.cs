@@ -8,6 +8,7 @@
         public string FirebaseUid { get; set; } = string.Empty;
         public string? AvatarUrl { get; set; }
         public List<UserConnection> Connections { get; set; } = new List<UserConnection>();
+        public List<UserDevice> Devices { get; set; } = new List<UserDevice>();
         public bool IsValidAccount { get; set; } = false;
     }
 
@@ -17,5 +18,13 @@
         public int UserId { get; set; }
         public string ConnectionId { get; set; }
         public User User { get; set; } // Navigation property
+    }
+
+    public class UserDevice
+    {
+        public int Id { get; set; }
+        public int UserId { get; set; }
+        public string? FcmToken { get; set; }
+        public DateTime LastUpdated { get; set; }
     }
 }
