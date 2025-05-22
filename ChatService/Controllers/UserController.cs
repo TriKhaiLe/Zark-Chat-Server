@@ -144,5 +144,33 @@ namespace ChatService.Controllers
                 UserId = user.Id
             });
         }
+
+        [HttpPost("update-user")]
+        [Authorize]
+        public async Task<IActionResult> UpdateUser([FromBody] UpdateUserRequest request)
+        {
+            var userUid = User.FindFirst("user_id")?.Value;
+            if (string.IsNullOrEmpty(userUid))
+                return Unauthorized("User ID not found in token");
+            var user = await _userRepository.GetUserByFirebaseUidAsync(userUid);
+            if (user == null)
+                return NotFound("User not found");
+            await _userRepository.UpdateUserAsync(user.Id, request.DisplayName, request.AvatarUrl, request.PublicKey);
+            return Ok(new { message = "User updated successfully." });
+        }
+
+        [HttpPost("update-public-key")]
+        [Authorize]
+        public async Task<IActionResult> UpdatePublicKey([FromBody] string publicKey)
+        {
+            var userUid = User.FindFirst("user_id")?.Value;
+            if (string.IsNullOrEmpty(userUid))
+                return Unauthorized("User ID not found in token");
+            var user = await _userRepository.GetUserByFirebaseUidAsync(userUid);
+            if (user == null)
+                return NotFound("User not found");
+            await _userRepository.UpdateUserAsync(user.Id, null, null, publicKey);
+            return Ok(new { message = "Public key updated successfully." });
+        }
     }
 }
