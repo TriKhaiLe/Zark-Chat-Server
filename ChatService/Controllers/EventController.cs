@@ -12,22 +12,38 @@ namespace ChatService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class EventController(IEventRepository eventRepository, IUserRepository userRepository) : Controller
+    public class EventController(IEventRepository eventRepository, IUserRepository userRepository) : ControllerBase
     {
         private readonly IEventRepository _eventRepository = eventRepository;
         private readonly IUserRepository _userRepository = userRepository;
 
-        // [Authorize]
-        [HttpGet]
-        public async Task<IActionResult> GetEvents([FromQuery] int userId)
+        [HttpGet("{id:guid}")]
+        public async Task<IActionResult> GetEventById(Guid id)
         {
-            var events = await _eventRepository.GetEventsByIdAsync(userId);
-            if (events.Count == 0)
+            var eventData = await _eventRepository.GetEventByIdAsync(id);
+            if (eventData == null)
             {
                 return NotFound(new
                 {
                     StatusCode = 404,
-                    Message = $"No events found for user with id: {userId}"
+                    Message = "Event not found"
+                });
+            }
+
+            return Ok(new { StatusCode = 200, Message = eventData });
+        }
+
+        // [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> GetEventsByUser([FromQuery] int userId)
+        {
+            var events = await _eventRepository.GetEventsByUserIdAsync(userId);
+            if (!events.Any())
+            {
+                return NotFound(new
+                {
+                    StatusCode = 404,
+                    Message = "User have no events"
                 });
             }
 
@@ -38,9 +54,9 @@ namespace ChatService.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateEvent([FromBody] EventRequest? eventData)
         {
-            if (eventData == null)
+            if (eventData is null)
             {
-                return BadRequest("Event data is null");
+                return BadRequest(new { statusCode = 400, message = "Event data is null" });
             }
 
             // Check if user not exists in database
@@ -50,12 +66,12 @@ namespace ChatService.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { StatusCode = 500, Message = ex.Message });
+                return BadRequest(new { StatusCode = 400, Message = ex.Message });
             }
 
             if (DateTime.Compare(eventData.StartTime, eventData.EndTime) >= 0)
             {
-                return BadRequest(new { StatusCode = 500, Message = "Start time must be before end time" });
+                return BadRequest(new { StatusCode = 400, Message = "Start time must be before end time" });
             }
 
             var newEvent = eventData.ToEntity();
@@ -63,48 +79,46 @@ namespace ChatService.Controllers
             try
             {
                 await _eventRepository.CreateEventAsync(newEvent);
-                return Created(
-                    uri: $"/api/events/{newEvent.Id}",
-                    value: newEvent
-                );
+                return CreatedAtAction(nameof(GetEventById), new { id = newEvent.Id }, newEvent);
+
             }
             catch (Exception ex)
             {
-                return BadRequest(new { StatusCode = 500, Message = ex.Message });
+                return BadRequest(new { StatusCode = 400, Message = ex.Message });
             }
         }
 
         // [Authorize]
-        [HttpDelete]
-        public async Task<IActionResult> DeleteEvent([FromQuery] int userId, [FromQuery] string eventId)
+        [HttpDelete("{id:guid}")]
+        public async Task<IActionResult> DeleteEvent(Guid eventId)
         {
             try
             {
-                await _eventRepository.DeleteEventAsync(userId, eventId);
+                await _eventRepository.DeleteEventAsync(eventId);
                 return Ok(new { StatusCode = 200, Message = "Event deleted successfully" });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { StatusCode = 500, Message = ex.Message });
+                return BadRequest(new { StatusCode = 400, Message = ex.Message });
             }
         }
 
-        [HttpPut]
-        public async Task<IActionResult> UpdateEvent([FromBody] Event? eventData)
+        [HttpPut("{id:guid}")]
+        public async Task<IActionResult> UpdateEvent(Guid id, [FromBody] Event eventData)
         {
-            if (eventData == null)
+            if (DateTime.Compare(eventData.StartTime, eventData.EndTime) >= 0)
             {
-                return BadRequest(new { statusCode = 500, message = "Event data is null" });
+                return BadRequest(new { StatusCode = 400, Message = "Start time must be before end time" });
             }
 
             try
             {
-                await _eventRepository.UpdateEventAsync(eventData);
+                await _eventRepository.UpdateEventAsync(id, eventData);
                 return Ok(new { statusCode = 200, message = "Event updated successfully" });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { statusCode = 500, message = ex.Message });
+                return BadRequest(new { statusCode = 400, message = ex.Message });
             }
         }
     }

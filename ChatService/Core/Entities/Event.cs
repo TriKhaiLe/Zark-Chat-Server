@@ -8,7 +8,7 @@ public class Event
     public string Description { get; set; } = string.Empty;
     public DateTime StartTime { get; set; }
     public DateTime EndTime { get; set; }
-    public List<Participant> Participants { get; set; } = new();
+    public List<Participant>? Participants { get; set; } = new();
 }
 
 public class Participant

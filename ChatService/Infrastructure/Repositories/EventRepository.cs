@@ -17,39 +17,26 @@ public class EventRepository(ChatDbContext context) : IEventRepository
         await _context.SaveChangesAsync();
     }
 
-    public Task<List<Event>> GetEventsByIdAsync(int userId)
+    public async Task<List<Event>> GetEventsByUserIdAsync(int userId)
     {
-        var events = _context.Events.Where(e => e.CreatorId == userId).ToList();
-
-        foreach (var eventItem in events)
-        {
-            eventItem.Participants = _context.Participants
-                .Where(p => p.EventId == eventItem.Id)
-                .ToList();
-        }
-
-        return Task.FromResult(events);
-    }
-
-    public async Task<List<Participant>> GetParticipantsByEventIdAsync(int userId, string eventId)
-    {
-        var eventGuid = Guid.TryParse(eventId, out var parsedId)
-            ? parsedId
-            : throw new ArgumentException("Invalid event ID");
-        var paticipants = await _context.Participants
-            .Where(p => p.EventId == eventGuid)
+        var events = await _context.Events
+            .Where(e => e.CreatorId == userId)
+            .Include(e => e.Participants)
             .ToListAsync();
-        return paticipants;
+
+        return events;
     }
 
-    public async Task DeleteEventAsync(int userId, string eventId)
+    public async Task<Event?> GetEventByIdAsync(Guid id)
     {
-        var eventGuid = Guid.TryParse(eventId, out var parsedId)
-            ? parsedId
-            : throw new ArgumentException("Invalid event ID");
+        var eventItem = await _context.Events.Where(e => e.Id == id).Include(e => e.Participants).FirstOrDefaultAsync();
+        return eventItem;
+    }
 
+    public async Task DeleteEventAsync(Guid id)
+    {
         var eventToDelete = await _context.Events
-            .FirstOrDefaultAsync(e => e.CreatorId == userId && e.Id == eventGuid);
+            .FirstOrDefaultAsync(e => e.Id == id);
 
         if (eventToDelete == null)
         {
@@ -60,14 +47,19 @@ public class EventRepository(ChatDbContext context) : IEventRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task UpdateEventAsync(Event @event)
+    public async Task UpdateEventAsync(Guid id, Event @event)
     {
-        var eventToUpdate = await _context.Events.FirstOrDefaultAsync(e => e.Id == @event.Id);
+        var eventToUpdate = await _context.Events.FirstOrDefaultAsync(e => e.Id == id);
 
         if (eventToUpdate == null)
         {
             throw new KeyNotFoundException("Event not found.");
         }
+
+        eventToUpdate.Title = @event.Title;
+        eventToUpdate.Description = @event.Description;
+        eventToUpdate.StartTime = @event.StartTime;
+        eventToUpdate.EndTime = @event.EndTime;
 
         _context.Events.Update(eventToUpdate);
         await _context.SaveChangesAsync();
