@@ -5,7 +5,7 @@ namespace ChatService.Mapper;
 
 public static class EventMapper
 {
-    public static Event ToEntity(this EventRequest request)
+    public static Event ToEntity(this EventRequest? request)
     {
         return new Event
         {

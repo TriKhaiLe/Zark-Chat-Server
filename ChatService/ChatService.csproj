@@ -25,6 +25,7 @@
     <Folder Include="Application\Abstractions\" />
     <Folder Include="Application\Services\" />
     <Folder Include="Application\User\Login\" />
+    <Folder Include="Migrations\" />
   </ItemGroup>
 
 </Project>
