@@ -13,12 +13,13 @@ namespace ChatService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class EmailController(IUserRepository userRepository, IEmailService emailService, IMemoryCache cache) : ControllerBase
+    public class EmailController(IUserRepository userRepository, IEmailService emailService, IMemoryCache cache)
+        : ControllerBase
     {
         private readonly IMemoryCache _cache = cache;
         private readonly IEmailService _emailService = emailService;
         private readonly IUserRepository _userRepository = userRepository;
-  
+
 
         [HttpPost("send-otp")]
         public async Task<IActionResult> SendOtp([FromBody] string email)
@@ -27,7 +28,7 @@ namespace ChatService.Controllers
             var rateLimitKey = $"OTP_RATE_{email}";
             if (_cache.TryGetValue(rateLimitKey, out _))
             {
-                return BadRequest(new { message = "Bạn chỉ có thể yêu cầu OTP mỗi 30 giây." });
+                return BadRequest(new { statusCode = 500, message = "Bạn chỉ có thể yêu cầu OTP mỗi 30 giây." });
             }
 
             // 2. Tạo OTP
@@ -41,7 +42,7 @@ namespace ChatService.Controllers
             _cache.Set($"OTP_{email}", otp, TimeSpan.FromMinutes(5));
             _cache.Set(rateLimitKey, true, TimeSpan.FromSeconds(60)); // Giới hạn 60s
 
-            return Ok(new { message = "OTP sent to your email." });
+            return Ok(new { statusCode = 200, message = "OTP sent to your email." });
         }
 
         [HttpPost("verify-otp")]
@@ -53,12 +54,13 @@ namespace ChatService.Controllers
                 {
                     _cache.Remove($"OTP_{request.Email}"); // Xác thực xong thì xóa
                     await _userRepository.UpdateValidationAccount(request.Email);
-                    return Ok(new { message = "Verify email successfully!" });
+                    return Ok(new { statusCode = 200, message = "Verify email successfully!" });
                 }
-                return BadRequest(new { message = "Your OTP is wrong." });
+
+                return BadRequest(new { statusCode = 500, message = "Your OTP is wrong." });
             }
 
-            return BadRequest(new { message = "OTP has expired or not exists." });
+            return BadRequest(new { statusCode = 500, message = "OTP has expired or not exists." });
         }
     }
 }

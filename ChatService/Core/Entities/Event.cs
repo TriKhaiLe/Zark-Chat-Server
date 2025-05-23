@@ -13,7 +13,9 @@ public class Event
 
 public class Participant
 {
-    public Guid Id { get; set; }    
+    public Guid Id { get; set; }
     public int UserId { get; set; }
     public string Status { get; set; }
-}   
+    
+    public Guid EventId { get; set; }
+}
