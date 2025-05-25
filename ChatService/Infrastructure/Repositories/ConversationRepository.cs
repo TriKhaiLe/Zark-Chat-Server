@@ -43,5 +43,15 @@ namespace ChatService.Infrastructure.Repositories
                 .OrderByDescending(c => c.LastMessageAt)
                 .ToListAsync();
         }
+
+        public Task SaveGroupSessionKeyAsync(int conversationId, Dictionary<int, string> encryptedSessionKeys)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Dictionary<int, string>> GetGroupSessionKeysAsync(int conversationId)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

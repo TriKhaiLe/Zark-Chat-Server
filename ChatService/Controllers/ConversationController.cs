@@ -80,6 +80,9 @@ namespace ChatService.Controllers
                 Participants = participants
             };
 
+            // Nhận encrypted session keys từ client (client sinh session key, mã hóa bằng public key từng thành viên và gửi lên)
+            conversation.EncryptedSessionKeys = request.EncryptedSessionKeys ?? [];
+
             await _conversationRepository.AddConversationAsync(conversation);
             return Ok(new CreateConversationResponse
             {
