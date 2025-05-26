@@ -80,6 +80,11 @@ namespace ChatService.Controllers
 
                 await _userRepository.AddUserAsync(newUser);
 
+                if (!string.IsNullOrEmpty(request.FcmToken))
+                {
+                    await _userRepository.AddFcmTokenAsync(newUser.Id, request.FcmToken);
+                }
+
                 return Ok(new RegisterResponse
                 {
                     Message = "User registered successfully.",
