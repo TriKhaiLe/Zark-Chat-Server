@@ -131,6 +131,32 @@ namespace ChatService.Application.Hubs
             }
         }
 
+        public async Task JoinConversation(int conversationId)
+        {
+            var token = Context.GetHttpContext()?.Request.Query["access_token"];
+            if (string.IsNullOrEmpty(token))
+            {
+                throw new HubException("Token was not provided");
+            }
+            var decodedToken = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(token);
+            var uid = decodedToken.Uid;
+            var user = await _userRepository.GetUserByFirebaseUidAsync(uid);
+            if (user == null)
+            {
+                throw new HubException("User not found");
+            }
+            var conversation = await _conversationRepository.GetConversationByIdAsync(conversationId);
+            if (conversation == null || !conversation.Participants.Any(p => p.UserId == user.Id))
+            {
+                throw new HubException("Conversation not found or user not a participant");
+            }
+            var participantIds = conversation.Participants.Select(p => p.UserId).Where(id => id != user.Id).ToList();
+            var publicKeys = await _userRepository.GetPublicKeysByUserIdsAsync(participantIds);
+            var sessionKeyInfo = conversation.EncryptedSessionKeys?.FirstOrDefault(k => k.UserId == user.Id);
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"conversation_{conversationId}");
+            await Clients.Caller.SendAsync("ReceivePublicKeysAndSessionKey", publicKeys, sessionKeyInfo);
+        }
+
         public override async Task OnConnectedAsync()
         {
             var token = Context.GetHttpContext()?.Request.Query["access_token"];
@@ -141,32 +167,23 @@ namespace ChatService.Application.Hubs
 
             try
             {
-                // Verify token using Firebase Admin SDK
                 var decodedToken = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(token);
                 var uid = decodedToken.Uid;
-                Console.WriteLine($"User connected with UID: {uid}");
-
-                // Save connection information
                 var user = await _userRepository.GetUserByFirebaseUidAsync(uid);
-                if (user != null)
+                if (user == null)
                 {
-                    await _userRepository.AddConnectionIdAsync(user.Id, Context.ConnectionId);
-                    Console.WriteLine($"ConnectionId {Context.ConnectionId} assigned to user {uid}");
-                }
-                else
-                {
-                    Console.WriteLine($"User not found with UID: {uid}");
+                    throw new HubException("User not found");
                 }
 
+                await _userRepository.AddConnectionIdAsync(user.Id, Context.ConnectionId);
                 await base.OnConnectedAsync();
+                Console.WriteLine($"ConnectionId {Context.ConnectionId} assigned to user {uid}");
             }
-            catch (FirebaseAuthException ex)
+            catch (FirebaseAuthException)
             {
-                Console.WriteLine($"Token verification failed: {ex.Message}");
                 throw new HubException("Invalid token");
             }
         }
-
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
             var senderUid = Context.User?.FindFirst("user_id")?.Value;

@@ -19,5 +19,7 @@ namespace ChatService.Core.Interfaces
         Task<List<string?>> GetFcmTokensByUserIdsAsync(List<int> userIds);
         Task RemoveAllFcmTokensAsync(int userId);
         Task UpdateUserAsync(int userId, string? displayName = null, string? avatarUrl = null, string? publicKey = null);
+        Task<Dictionary<int, string>> GetPublicKeysByUserIdsAsync(List<int> userIds);
+        Task<List<EncryptedSessionKeyInfo>> GetEncryptedSessionKeysForUserAsync(int userId);
     }
 }
