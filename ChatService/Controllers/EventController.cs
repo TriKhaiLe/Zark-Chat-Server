@@ -30,7 +30,9 @@ namespace ChatService.Controllers
                 });
             }
 
-            return Ok(new { StatusCode = 200, Message = eventData });
+            var response = EventMapper.ToEventDto(eventData);
+
+            return Ok(new { StatusCode = 200, Message = response });
         }
 
         // [Authorize]
@@ -38,6 +40,7 @@ namespace ChatService.Controllers
         public async Task<IActionResult> GetEventsByUser([FromQuery] int userId)
         {
             var events = await _eventRepository.GetEventsByUserIdAsync(userId);
+
             if (!events.Any())
             {
                 return NotFound(new
@@ -47,7 +50,8 @@ namespace ChatService.Controllers
                 });
             }
 
-            return Ok(new { StatusCode = 200, Message = events });
+            var response = events.Select(EventMapper.ToEventDto);
+            return Ok(new { StatusCode = 200, Message = response });
         }
 
         // [Authorize]
@@ -74,13 +78,26 @@ namespace ChatService.Controllers
                 return BadRequest(new { StatusCode = 400, Message = "Start time must be before end time" });
             }
 
+            try
+            {
+                foreach (var participant in eventData.Participants)
+                {
+                    var user = await _userRepository.GetUserByIdAsync(participant);
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { StatusCode = 400, Message = ex.Message });
+            }
+
             var newEvent = eventData.ToEntity();
 
             try
             {
                 await _eventRepository.CreateEventAsync(newEvent);
-                return CreatedAtAction(nameof(GetEventById), new { id = newEvent.Id }, newEvent);
-
+                var response = EventMapper.ToEventDto(newEvent);
+                return CreatedAtAction(nameof(GetEventById), new { id = response.Id },
+                    new { StatusCode = 201, Message = response });
             }
             catch (Exception ex)
             {
@@ -90,11 +107,11 @@ namespace ChatService.Controllers
 
         // [Authorize]
         [HttpDelete("{id:guid}")]
-        public async Task<IActionResult> DeleteEvent(Guid eventId)
+        public async Task<IActionResult> DeleteEvent(Guid id)
         {
             try
             {
-                await _eventRepository.DeleteEventAsync(eventId);
+                await _eventRepository.DeleteEventAsync(id);
                 return Ok(new { StatusCode = 200, Message = "Event deleted successfully" });
             }
             catch (Exception ex)
@@ -104,7 +121,7 @@ namespace ChatService.Controllers
         }
 
         [HttpPut("{id:guid}")]
-        public async Task<IActionResult> UpdateEvent(Guid id, [FromBody] Event eventData)
+        public async Task<IActionResult> UpdateEvent(Guid id, [FromBody] EventUpdateRequest eventData)
         {
             if (DateTime.Compare(eventData.StartTime, eventData.EndTime) >= 0)
             {

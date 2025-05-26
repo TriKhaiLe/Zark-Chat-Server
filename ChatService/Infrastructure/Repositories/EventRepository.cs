@@ -1,4 +1,5 @@
 ﻿using ChatService.Controllers.RequestModels;
+using ChatService.Controllers.ResponseModels;
 using ChatService.Core.Entities;
 using ChatService.Core.Interfaces;
 using ChatService.Infrastructure.Data;
@@ -19,22 +20,28 @@ public class EventRepository(ChatDbContext context) : IEventRepository
 
     public async Task<List<Event>> GetEventsByUserIdAsync(int userId)
     {
-        var events = await _context.Events
+        return await _context.Events
             .Where(e => e.CreatorId == userId)
-            .Include(e => e.Participants)
+            .Include(e => e.Creator!)
+            .Include(e => e.Participants).ThenInclude(p => p.User)
+            .AsNoTracking()
             .ToListAsync();
-
-        return events;
     }
-
     public async Task<Event?> GetEventByIdAsync(Guid id)
     {
-        var eventItem = await _context.Events.Where(e => e.Id == id).Include(e => e.Participants).FirstOrDefaultAsync();
+        var eventItem = await _context.Events
+            .Where(e => e.Id == id)
+            .Include(e => e.Creator)
+            .Include(e => e.Participants)
+            .FirstOrDefaultAsync();
         return eventItem;
     }
 
     public async Task DeleteEventAsync(Guid id)
     {
+        var participants = await _context.Participants.Where(p => p.EventId == id).ToListAsync();
+        _context.Participants.RemoveRange(participants);
+
         var eventToDelete = await _context.Events
             .FirstOrDefaultAsync(e => e.Id == id);
 
@@ -47,7 +54,7 @@ public class EventRepository(ChatDbContext context) : IEventRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task UpdateEventAsync(Guid id, Event @event)
+    public async Task UpdateEventAsync(Guid id, EventUpdateRequest @event)
     {
         var eventToUpdate = await _context.Events.FirstOrDefaultAsync(e => e.Id == id);
 
