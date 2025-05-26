@@ -188,5 +188,29 @@ namespace ChatService.Infrastructure.Repositories
             if (publicKey != null) user.PublicKey = publicKey;
             await _context.SaveChangesAsync();
         }
+
+        public async Task<Dictionary<int, string>> GetPublicKeysByUserIdsAsync(List<int> userIds)
+        {
+            return await _context.Users
+                .Where(u => userIds.Contains(u.Id) && u.PublicKey != null)
+                .ToDictionaryAsync(u => u.Id, u => u.PublicKey!);
+        }
+
+        public async Task<List<EncryptedSessionKeyInfo>> GetEncryptedSessionKeysForUserAsync(int userId)
+        {
+            var conversations = await _context.Conversations
+                .Include(c => c.EncryptedSessionKeys)
+                .Include(c => c.Participants)
+                .Where(c => c.Participants.Any(p => p.UserId == userId))
+                .ToListAsync();
+            var result = new List<EncryptedSessionKeyInfo>();
+            foreach (var conv in conversations)
+            {
+                var keyInfo = conv.EncryptedSessionKeys?.FirstOrDefault(k => k.UserId == userId);
+                if (keyInfo != null)
+                    result.Add(new EncryptedSessionKeyInfo { UserId = userId, EncryptedSessionKey = keyInfo.EncryptedSessionKey });
+            }
+            return result;
+        }
     }
 }
