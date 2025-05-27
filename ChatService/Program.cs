@@ -1,5 +1,4 @@
-﻿
-using ChatService.Application.Hubs;
+﻿using ChatService.Application.Hubs;
 using ChatService.Core.Interfaces;
 using ChatService.Infrastructure.Authentication;
 using ChatService.Infrastructure.Data;
@@ -148,6 +147,7 @@ namespace ChatService
             app.UseSwaggerUI(c =>
             {
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
+                c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None); // Collapse all controllers by default
             });
 
             app.UseRouting();
