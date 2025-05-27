@@ -138,5 +138,27 @@ namespace ChatService.Controllers
                 return BadRequest(new { statusCode = 400, message = ex.Message });
             }
         }
+
+        [HttpPost("{eventId:guid}/participants")]
+        public async Task<IActionResult> AddParticipant(Guid eventId, [FromBody] int userId)
+        {
+            try
+            {
+                var participant = new Participant
+                {
+                    UserId = userId,
+                    EventId = eventId,
+                    Status = "Pending" 
+                };
+
+                await _eventRepository.AddParticipantAsync(participant);
+                return Ok(new { StatusCode = 200, Message = "Participant added successfully" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { StatusCode = 400, Message = ex.Message });
+            }
+        }
+        
     }
 }
