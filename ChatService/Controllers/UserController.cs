@@ -177,5 +177,15 @@ namespace ChatService.Controllers
             await _userRepository.UpdateUserAsync(user.Id, null, null, publicKey);
             return Ok(new { message = "Public key updated successfully." });
         }
+
+        [HttpPost("get-public-keys")]
+        [Authorize]
+        public async Task<IActionResult> GetPublicKeys([FromBody] List<int> userIds)
+        {
+            if (userIds == null || userIds.Count == 0)
+                return BadRequest("userIds is required");
+            var publicKeys = await _userRepository.GetPublicKeysByUserIdsAsync(userIds);
+            return Ok(publicKeys);
+        }
     }
 }
