@@ -15,5 +15,11 @@ namespace ChatService.Core.Interfaces
         Task<List<User>> GetUsersByIdsAsync(List<int> allUserIds);
         Task UpdateValidationAccount(string email);
         Task UpdateEmailUserAsync(string email, string firebaseUid);
+        Task AddFcmTokenAsync(int userId, string fcmToken);
+        Task<List<string?>> GetFcmTokensByUserIdsAsync(List<int> userIds);
+        Task RemoveAllFcmTokensAsync(int userId);
+        Task UpdateUserAsync(int userId, string? displayName = null, string? avatarUrl = null, string? publicKey = null);
+        Task<Dictionary<int, string>> GetPublicKeysByUserIdsAsync(List<int> userIds);
+        Task<List<EncryptedSessionKeyInfo>> GetEncryptedSessionKeysForUserAsync(int userId);
     }
 }

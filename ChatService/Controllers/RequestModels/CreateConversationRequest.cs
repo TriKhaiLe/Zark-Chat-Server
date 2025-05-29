@@ -1,4 +1,5 @@
-﻿using Swashbuckle.AspNetCore.Annotations;
+﻿using ChatService.Core.Entities;
+using Swashbuckle.AspNetCore.Annotations;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
@@ -19,5 +20,7 @@ namespace ChatService.Controllers.RequestModels
 
         [MaxLength(100)]
         public string? Name { get; set; }
+
+        public List<EncryptedSessionKeyInfo>? EncryptedSessionKeys { get; set; }
     }
 }

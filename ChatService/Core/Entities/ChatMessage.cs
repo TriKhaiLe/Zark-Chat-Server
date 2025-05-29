@@ -8,6 +8,7 @@
         public DateTime? LastMessageAt { get; set; }
         public virtual ICollection<ConversationParticipant> Participants { get; set; } = [];
         public virtual ICollection<ChatMessage> Messages { get; set; } = [];
+        public List<EncryptedSessionKeyInfo> EncryptedSessionKeys { get; set; } = new List<EncryptedSessionKeyInfo>();
     }
 
     public class ConversationParticipant
@@ -31,7 +32,9 @@
         public string? Message { get; set; }
         public string? MediaLink { get; set; }
         public string Type { get; set; }
+        public string Status { get; set; }
         public virtual ICollection<MessageReadStatus> ReadStatuses { get; set; }
+        public string? EncryptedSessionKey { get; set; }
     }
 
     public class MessageReadStatus
@@ -41,5 +44,11 @@
         public DateTime? ReadAt { get; set; }
         public virtual ChatMessage Message { get; set; }
         public virtual User User { get; set; }
+    }
+
+    public class EncryptedSessionKeyInfo
+    {
+        public int UserId { get; set; }
+        public string EncryptedSessionKey { get; set; } = string.Empty;
     }
 }

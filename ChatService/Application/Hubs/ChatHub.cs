@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.SignalR;
 using FirebaseAdmin.Auth;
 using ChatService.Core.Interfaces;
+using FirebaseAdmin.Messaging;
 
 namespace ChatService.Application.Hubs
 {
@@ -34,7 +35,8 @@ namespace ChatService.Application.Hubs
                 UserSendId = senderId,
                 Message = content,
                 Type = messageType,
-                SendDate = DateTime.UtcNow
+                SendDate = DateTime.UtcNow,
+                Status = "Sent"
             };
 
             await _messageRepository.AddMessageAsync(message);
@@ -44,13 +46,115 @@ namespace ChatService.Application.Hubs
             var participantUserIds = conversation.Participants.Select(p => p.UserId).ToList();
             var connections = await _userRepository.GetConnectionsByUserIdsAsync(participantUserIds);
             var connectionIds = connections.Select(c => c.ConnectionId).ToList();
+            var onlineUserIds = connections.Select(c => c.UserId).Distinct().ToList();
 
             // Send the message to all members in the conversation
             if (connectionIds.Any())
             {
                 await Clients.Clients(connectionIds)
-                    .SendAsync("ReceiveMessage", conversationId, senderId, content, messageType, message.SendDate);
+                    .SendAsync("ReceiveMessage", conversationId, senderId, content, messageType, message.SendDate, message.Status, message.ChatMessageId);
+
+                // Mark as Received for online recipients
+                var recipientConnectionIds = connections
+                    .Where(c => c.UserId != senderId)
+                    .Select(c => c.ConnectionId)
+                    .ToList();
+                if (recipientConnectionIds.Any())
+                {
+                    await _messageRepository.UpdateMessageStatusAsync(message.ChatMessageId, "Received");
+                    await Clients.Clients(recipientConnectionIds)
+                        .SendAsync("UpdateMessageStatus", message.ChatMessageId, "Received");
+                }
             }
+
+            // Send push notifications to offline users
+            var offlineUserIds = participantUserIds
+                .Where(id => id != senderId && !onlineUserIds.Contains(id))
+                .ToList();
+            if (offlineUserIds.Any())
+            {
+                var fcmTokens = await _userRepository.GetFcmTokensByUserIdsAsync(offlineUserIds);
+                if (fcmTokens.Any())
+                {
+                    // Lấy displayName của sender
+                    var sender = await _userRepository.GetUserByIdAsync(senderId);
+                    var senderName = sender?.DisplayName ?? $"User {senderId}";
+                    var fcmMessage = new MulticastMessage
+                    {
+                        Tokens = fcmTokens,
+                        Notification = new Notification
+                        {
+                            Title = senderName,
+                            Body = content
+                        },
+                        Data = new Dictionary<string, string>
+                        {
+                            { "conversationId", conversationId.ToString() },
+                            { "messageId", message.ChatMessageId.ToString() },
+                            { "senderId", senderId.ToString() }
+                        }
+                    };
+                    await FirebaseMessaging.DefaultInstance.SendEachForMulticastAsync(fcmMessage);
+                }
+            }
+        }
+
+        public async Task Typing(int conversationId, int senderId)
+        {
+            var conversation = await _conversationRepository.GetConversationByIdAsync(conversationId);
+            if (conversation == null)
+            {
+                throw new HubException("Conversation does not exist");
+            }
+
+            var isParticipant = conversation.Participants.Any(p => p.UserId == senderId);
+            if (!isParticipant)
+            {
+                throw new HubException("User does not belong to this conversation");
+            }
+
+            var participantUserIds = conversation.Participants.Select(p => p.UserId).Where(id => id != senderId).ToList();
+            var connections = await _userRepository.GetConnectionsByUserIdsAsync(participantUserIds);
+            var connectionIds = connections.Select(c => c.ConnectionId).ToList();
+
+            // get name of sender
+            var sender = await _userRepository.GetUserByIdAsync(senderId);
+            if (sender == null)
+            {
+                throw new HubException("Sender does not exist");
+            }
+
+            if (connectionIds.Any())
+            {
+                await Clients.Clients(connectionIds)
+                    .SendAsync("UserTyping", conversationId, sender.DisplayName, sender.AvatarUrl);
+            }
+        }
+
+        public async Task JoinConversation(int conversationId)
+        {
+            var token = Context.GetHttpContext()?.Request.Query["access_token"];
+            if (string.IsNullOrEmpty(token))
+            {
+                throw new HubException("Token was not provided");
+            }
+            var decodedToken = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(token);
+            var uid = decodedToken.Uid;
+            var user = await _userRepository.GetUserByFirebaseUidAsync(uid);
+            if (user == null)
+            {
+                throw new HubException("User not found");
+            }
+            var conversation = await _conversationRepository.GetConversationByIdAsync(conversationId);
+            if (conversation == null || !conversation.Participants.Any(p => p.UserId == user.Id))
+            {
+                throw new HubException("Conversation not found or user not a participant");
+            }
+            var participantIds = conversation.Participants.Select(p => p.UserId).Where(id => id != user.Id).ToList();
+            var publicKeys = await _userRepository.GetPublicKeysByUserIdsAsync(participantIds);
+            var sessionKeyInfo = conversation.EncryptedSessionKeys?.FirstOrDefault(k => k.UserId == user.Id);
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"conversation_{conversationId}");
+            await Clients.Caller.SendAsync("ReceivePublicKeysAndSessionKey", publicKeys, sessionKeyInfo);
         }
 
         public override async Task OnConnectedAsync()
@@ -63,32 +167,23 @@ namespace ChatService.Application.Hubs
 
             try
             {
-                // Verify token using Firebase Admin SDK
                 var decodedToken = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(token);
                 var uid = decodedToken.Uid;
-                Console.WriteLine($"User connected with UID: {uid}");
-
-                // Save connection information
                 var user = await _userRepository.GetUserByFirebaseUidAsync(uid);
-                if (user != null)
+                if (user == null)
                 {
-                    await _userRepository.AddConnectionIdAsync(user.Id, Context.ConnectionId);
-                    Console.WriteLine($"ConnectionId {Context.ConnectionId} assigned to user {uid}");
-                }
-                else
-                {
-                    Console.WriteLine($"User not found with UID: {uid}");
+                    throw new HubException("User not found");
                 }
 
+                await _userRepository.AddConnectionIdAsync(user.Id, Context.ConnectionId);
                 await base.OnConnectedAsync();
+                Console.WriteLine($"ConnectionId {Context.ConnectionId} assigned to user {uid}");
             }
-            catch (FirebaseAuthException ex)
+            catch (FirebaseAuthException)
             {
-                Console.WriteLine($"Token verification failed: {ex.Message}");
                 throw new HubException("Invalid token");
             }
         }
-
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
             var senderUid = Context.User?.FindFirst("user_id")?.Value;
