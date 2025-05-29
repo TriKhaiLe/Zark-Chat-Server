@@ -75,7 +75,9 @@ namespace ChatService.Controllers
                 {
                     FirebaseUid = firebaseUid,
                     Email = request.Email,
-                    DisplayName = string.IsNullOrEmpty(request.DisplayName) ? request.Email.Split('@')[0] : request.DisplayName
+                    DisplayName = string.IsNullOrEmpty(request.DisplayName)
+                        ? request.Email.Split('@')[0]
+                        : request.DisplayName
                 };
 
                 await _userRepository.AddUserAsync(newUser);
@@ -106,11 +108,16 @@ namespace ChatService.Controllers
 
                 foreach (var user in userList)
                 {
-                    // Ví dụ update email theo uid
-                    await _userRepository.UpdateEmailUserAsync(user.Email, user.Uid);
+                    var newUser = new User
+                    {
+                        FirebaseUid = user.Uid,
+                        Email = user.Email,
+                        DisplayName = user.Email.Split('@')[0]
+                    };
+                    await _userRepository.AddUserAsync(newUser);
                 }
-                return Ok(new { message = "Emails updated successfully." });
 
+                return Ok(new { message = "Sync data user successfully." });
             }
             catch (Exception ex)
             {
