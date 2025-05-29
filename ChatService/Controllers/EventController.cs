@@ -150,7 +150,7 @@ namespace ChatService.Controllers
                     EventId = eventId,
                     Status = "Pending" 
                 };
-
+        
                 await _eventRepository.AddParticipantAsync(participant);
                 return Ok(new { StatusCode = 200, Message = "Participant added successfully" });
             }
@@ -160,5 +160,20 @@ namespace ChatService.Controllers
             }
         }
         
-    }
+        [HttpDelete("{eventId:guid}/participants/{userId:int}")]
+        public async Task<IActionResult> RemoveParticipant(Guid eventId, int userId)
+        {
+            try
+            {
+                await _eventRepository.RemoveParticipantAsync(eventId, userId);
+                return Ok(new { StatusCode = 200, Message = "Participant removed successfully" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { StatusCode = 400, Message = ex.Message });
+            }
+        }
+
+        
+    }   
 }

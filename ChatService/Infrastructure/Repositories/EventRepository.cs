@@ -27,6 +27,7 @@ public class EventRepository(ChatDbContext context) : IEventRepository
             .AsNoTracking()
             .ToListAsync();
     }
+
     public async Task<Event?> GetEventByIdAsync(Guid id)
     {
         var eventItem = await _context.Events
@@ -70,5 +71,23 @@ public class EventRepository(ChatDbContext context) : IEventRepository
 
         _context.Events.Update(eventToUpdate);
         await _context.SaveChangesAsync();
+    }
+
+    public async Task AddParticipantAsync(Participant? participant)
+    {
+        participant = await _context.Participants.FirstOrDefaultAsync(p =>
+            participant != null && p.UserId == participant.UserId && p.EventId == participant.EventId);
+        if (participant == null)
+        {
+            throw new KeyNotFoundException("Participant not found.");
+        }
+
+        _context.Participants.Add(participant);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task RemoveParticipantAsync(Guid eventId, int userId)
+    {
+        var participants = await _context.Participants.Where(p => p.EventId == eventId).ToListAsync();
     }
 }
