@@ -11,10 +11,15 @@ namespace ChatService.Infrastructure.Data.Configurations
             builder.HasKey(u => u.Id);
             builder.Property(u => u.Id).ValueGeneratedOnAdd();
             builder.Property(u => u.DisplayName).IsRequired().HasMaxLength(50);
+            builder.Property(u => u.PublicKey).HasColumnType("text");
             builder.HasMany(u => u.Connections)
                 .WithOne(uc => uc.User)
                 .HasForeignKey(uc => uc.UserId)
                 .OnDelete(DeleteBehavior.Cascade); // Xóa các kết nối khi người dùng bị xóa
+            builder.HasMany(u => u.Devices)
+                .WithOne()
+                .HasForeignKey(ud => ud.UserId)
+                .OnDelete(DeleteBehavior.Cascade); // Xóa các thiết bị khi người dùng bị xóa
 
         }
     }

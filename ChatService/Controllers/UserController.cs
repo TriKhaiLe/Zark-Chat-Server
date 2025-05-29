@@ -82,6 +82,11 @@ namespace ChatService.Controllers
 
                 await _userRepository.AddUserAsync(newUser);
 
+                if (!string.IsNullOrEmpty(request.FcmToken))
+                {
+                    await _userRepository.AddFcmTokenAsync(newUser.Id, request.FcmToken);
+                }
+
                 return Ok(new RegisterResponse
                 {
                     Message = "User registered successfully.",
@@ -138,19 +143,56 @@ namespace ChatService.Controllers
                 return Unauthorized("User not found in system");
             }
 
-            //if (!user.IsValidAccount)
-            //{
-            //    return StatusCode(403, new
-            //    {
-            //        error = "Account is invalid, please verify to continue."
-            //    });
-            //}
+            // Xử lý FCM Token nếu client gửi lên
+            if (!string.IsNullOrEmpty(loginRequest.FcmToken))
+            {
+                await _userRepository.RemoveAllFcmTokensAsync(user.Id);
+                await _userRepository.AddFcmTokenAsync(user.Id, loginRequest.FcmToken);
+            }
 
             return Ok(new LoginResponse
             {
                 Token = token,
                 UserId = user.Id
             });
+        }
+
+        [HttpPost("update-user")]
+        [Authorize]
+        public async Task<IActionResult> UpdateUser([FromBody] UpdateUserRequest request)
+        {
+            var userUid = User.FindFirst("user_id")?.Value;
+            if (string.IsNullOrEmpty(userUid))
+                return Unauthorized("User ID not found in token");
+            var user = await _userRepository.GetUserByFirebaseUidAsync(userUid);
+            if (user == null)
+                return NotFound("User not found");
+            await _userRepository.UpdateUserAsync(user.Id, request.DisplayName, request.AvatarUrl, request.PublicKey);
+            return Ok(new { message = "User updated successfully." });
+        }
+
+        [HttpPost("update-public-key")]
+        [Authorize]
+        public async Task<IActionResult> UpdatePublicKey([FromBody] string publicKey)
+        {
+            var userUid = User.FindFirst("user_id")?.Value;
+            if (string.IsNullOrEmpty(userUid))
+                return Unauthorized("User ID not found in token");
+            var user = await _userRepository.GetUserByFirebaseUidAsync(userUid);
+            if (user == null)
+                return NotFound("User not found");
+            await _userRepository.UpdateUserAsync(user.Id, null, null, publicKey);
+            return Ok(new { message = "Public key updated successfully." });
+        }
+
+        [HttpPost("get-public-keys")]
+        [Authorize]
+        public async Task<IActionResult> GetPublicKeys([FromBody] List<int> userIds)
+        {
+            if (userIds == null || userIds.Count == 0)
+                return BadRequest("userIds is required");
+            var publicKeys = await _userRepository.GetPublicKeysByUserIdsAsync(userIds);
+            return Ok(publicKeys);
         }
     }
 }

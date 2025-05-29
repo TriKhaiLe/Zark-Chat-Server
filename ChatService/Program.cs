@@ -1,4 +1,5 @@
-﻿using ChatService.Application.Hubs;
+﻿
+using ChatService.Application.Hubs;
 using ChatService.Core.Interfaces;
 using ChatService.Infrastructure.Authentication;
 using ChatService.Infrastructure.Data;
@@ -128,8 +129,7 @@ namespace ChatService
                     Scheme = "Bearer",
                     BearerFormat = "JWT",
                     In = ParameterLocation.Header,
-                    Description =
-                        "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6IjcxMTE1MjM1YTZjNjE0NTRlZmRlZGM0NWE3N2U0MzUxMzY3ZWViZTAiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vemFya2NoYXQtZWZhMjYiLCJhdWQiOiJ6YXJrY2hhdC1lZmEyNiIsImF1dGhfdGltZSI6MTc0NDAyMzQ3MywidXNlcl9pZCI6IlVOYXpiRkJ4ektjdnl4SWlZVjNIWno2VUtITTIiLCJzdWIiOiJVTmF6YkZCeHpLY3Z5eElpWVYzSFp6NlVLSE0yIiwiaWF0IjoxNzQ0MDIzNDczLCJleHAiOjE3NDQwMjcwNzMsImVtYWlsIjoienhjQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwiZmlyZWJhc2UiOnsiaWRlbnRpdGllcyI6eyJlbWFpbCI6WyJ6eGNAZ21haWwuY29tIl19LCJzaWduX2luX3Byb3ZpZGVyIjoicGFzc3dvcmQifX0.N417LmZQKDbLodFDOgmDbOW5_Jt2RAlF3ShwtKsdZyqvLGsGJKVYLB2-mxlQaj7-f3MlKzDWaYC3mZP3rk0JCeV0FkmCg7hNhDVtjDnXjzEw6ZAW09PnKcU1x78o13xSSMNJyfgHNjlbRiJVZ-janNmlnFuH6IntORULcUKSfZHL2hfDZynkBCJh4LIL7BLyg1zx_EmyiK7mc9h8LchSTxrT10me_GKjsGRUNrByo2p31w19tunadYTuMi4hNdP4iCeUq4Ee7vxsZtzuoo95zxGAhpQZRBOmtD1Q3FeJpIt90K-C77cfu6LbFMgpouaHig-ZnLrQBD2gg9EXk0TFCQ",
+                    Description = "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6IjcxMTE1MjM1YTZjNjE0NTRlZmRlZGM0NWE3N2U0MzUxMzY3ZWViZTAiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vemFya2NoYXQtZWZhMjYiLCJhdWQiOiJ6YXJrY2hhdC1lZmEyNiIsImF1dGhfdGltZSI6MTc0NDAyMzQ3MywidXNlcl9pZCI6IlVOYXpiRkJ4ektjdnl4SWlZVjNIWno2VUtITTIiLCJzdWIiOiJVTmF6YkZCeHpLY3Z5eElpWVYzSFp6NlVLSE0yIiwiaWF0IjoxNzQ0MDIzNDczLCJleHAiOjE3NDQwMjcwNzMsImVtYWlsIjoienhjQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwiZmlyZWJhc2UiOnsiaWRlbnRpdGllcyI6eyJlbWFpbCI6WyJ6eGNAZ21haWwuY29tIl19LCJzaWduX2luX3Byb3ZpZGVyIjoicGFzc3dvcmQifX0.N417LmZQKDbLodFDOgmDbOW5_Jt2RAlF3ShwtKsdZyqvLGsGJKVYLB2-mxlQaj7-f3MlKzDWaYC3mZP3rk0JCeV0FkmCg7hNhDVtjDnXjzEw6ZAW09PnKcU1x78o13xSSMNJyfgHNjlbRiJVZ-janNmlnFuH6IntORULcUKSfZHL2hfDZynkBCJh4LIL7BLyg1zx_EmyiK7mc9h8LchSTxrT10me_GKjsGRUNrByo2p31w19tunadYTuMi4hNdP4iCeUq4Ee7vxsZtzuoo95zxGAhpQZRBOmtD1Q3FeJpIt90K-C77cfu6LbFMgpouaHig-ZnLrQBD2gg9EXk0TFCQ",
                 });
 
                 options.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -143,7 +143,7 @@ namespace ChatService
                                 Id = "Bearer"
                             }
                         },
-                        new string[] { }
+                        new string[] {}
                     }
                 });
 
@@ -153,7 +153,11 @@ namespace ChatService
             var app = builder.Build();
 
             app.UseSwagger();
-            app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "v1"); });
+            app.UseSwaggerUI(c =>
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
+                c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None); // Collapse all controllers by default
+            });
 
             app.UseRouting();
             app.UseCors("AllowChatClient");
@@ -174,5 +178,6 @@ namespace ChatService
             var configValue = config.GetValue<string>(key);
             return string.IsNullOrEmpty(configValue) ? Environment.GetEnvironmentVariable(fallbackEnvVar) : configValue;
         }
+
     }
 }
