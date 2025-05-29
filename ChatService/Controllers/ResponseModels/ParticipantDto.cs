@@ -1,8 +1,10 @@
 ﻿namespace ChatService.Controllers.ResponseModels
 {
-    internal class ParticipantDto
+    public class ParticipantDto
     {
-        public int UserId { get; set; }
+        public int Id { get; set; }
         public string DisplayName { get; set; }
+        public string Status { get; set; }
+        public string Avatar { get; set; } = null!;
     }
 }

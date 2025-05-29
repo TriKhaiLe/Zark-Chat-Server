@@ -1,4 +1,5 @@
-﻿using ChatService.Application.Hubs;
+﻿
+using ChatService.Application.Hubs;
 using ChatService.Core.Interfaces;
 using ChatService.Infrastructure.Authentication;
 using ChatService.Infrastructure.Data;
@@ -26,11 +27,11 @@ namespace ChatService
                 options.AddPolicy("AllowChatClient", builder =>
                 {
                     builder.WithOrigins(
-                        "http://127.0.0.1:5500",
-                        "https://zark-chat-web-client.vercel.app") 
-                           .AllowAnyMethod()
-                           .AllowAnyHeader()
-                           .AllowCredentials(); // Quan trọng cho SignalR
+                            "http://127.0.0.1:5500",
+                            "https://zark-chat-web-client.vercel.app")
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+                        .AllowCredentials(); // Quan trọng cho SignalR
                 });
             });
 
@@ -38,7 +39,8 @@ namespace ChatService
             var validIssuer = GetConfigValue(config, "Authentication:ValidIssuer", "AUTH_VALID_ISSUER");
             var validAudience = GetConfigValue(config, "Authentication:ValidAudience", "AUTH_VALID_AUDIENCE");
             var tokenUri = GetConfigValue(config, "Authentication:TokenUri", "AUTH_TOKEN_URI");
-            var connectionString = GetConfigValue(config, "ConnectionStrings:DefaultConnection", "DB_CONNECTION_STRING");
+            var connectionString =
+                GetConfigValue(config, "ConnectionStrings:DefaultConnection", "DB_CONNECTION_STRING");
 
             if (builder.Environment.IsDevelopment())
             {
@@ -80,6 +82,7 @@ namespace ChatService
                             {
                                 context.Token = accessToken;
                             }
+
                             return Task.CompletedTask;
                         }
                     };
@@ -96,6 +99,7 @@ namespace ChatService
             builder.Services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
             builder.Services.AddScoped<IConversationRepository, ConversationRepository>();
             builder.Services.AddScoped<IUserRepository, UserRepository>();
+            builder.Services.AddScoped<IEventRepository, EventRepository>();
             builder.Services.AddSingleton<IAuthenticationService, AuthenticationService>();
             builder.Services.AddMemoryCache();
 
@@ -105,6 +109,11 @@ namespace ChatService
             builder.Services.AddSignalR();
 
             builder.Services.AddControllers();
+            builder.Services.AddControllers().AddJsonOptions(opt =>
+            {
+                opt.JsonSerializerOptions.ReferenceHandler =
+                    System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+            });
 
             builder.Services.AddEndpointsApiExplorer();
 
