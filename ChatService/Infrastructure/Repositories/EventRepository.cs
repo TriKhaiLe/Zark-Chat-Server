@@ -2,7 +2,6 @@
 using ChatService.Core.Entities;
 using ChatService.Core.Interfaces;
 using ChatService.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
 
 namespace ChatService.Infrastructure.Repositories;
 
@@ -17,9 +16,6 @@ public class EventRepository(ChatDbContext context) : IEventRepository
 
     public async Task<List<Event>> GetEventsAsync()
     {
-        var events = await _context.Events
-            .Include(e => e.Participants)
-            .ToListAsync();
-        return events;
+        throw new NotImplementedException();
     }
 }
