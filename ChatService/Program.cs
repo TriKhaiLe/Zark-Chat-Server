@@ -96,6 +96,7 @@ namespace ChatService
             builder.Services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
             builder.Services.AddScoped<IConversationRepository, ConversationRepository>();
             builder.Services.AddScoped<IUserRepository, UserRepository>();
+            builder.Services.AddScoped<IEventRepository, EventRepository>();
             builder.Services.AddSingleton<IAuthenticationService, AuthenticationService>();
             builder.Services.AddMemoryCache();
 
