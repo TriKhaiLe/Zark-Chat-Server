@@ -15,4 +15,9 @@ public class ParticipantMapper
             Avatar = participant.User?.AvatarUrl ?? "",
         };
     }
+
+    public static List<ParticipantDto> MapToDto(List<Participant> participants)
+    {
+        return participants.Select(MapToDto).ToList();
+    }
 }
