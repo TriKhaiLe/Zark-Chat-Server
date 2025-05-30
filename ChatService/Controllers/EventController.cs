@@ -1,5 +1,6 @@
 ﻿using System.Runtime.InteropServices.JavaScript;
 using ChatService.Controllers.RequestModels;
+using ChatService.Core.Constants;
 using ChatService.Core.Entities;
 using ChatService.Core.Interfaces;
 using ChatService.Mapper;
@@ -140,18 +141,18 @@ namespace ChatService.Controllers
         }
 
         [HttpPost("{eventId:guid}/participants")]
-        public async Task<IActionResult> AddParticipant(Guid eventId, [FromBody] int userId)
+        public async Task<IActionResult> AddParticipant(Guid eventId, [FromBody] ParticipantRequest participant)
         {
             try
             {
-                var participant = new Participant
+                var newParticipant = new Participant
                 {
-                    UserId = userId,
+                    UserId = participant.UserId,
                     EventId = eventId,
-                    Status = "Pending" 
+                    Status = EventStatus.Pending
                 };
-        
-                await _eventRepository.AddParticipantAsync(participant);
+
+                await _eventRepository.AddParticipantAsync(newParticipant);
                 return Ok(new { StatusCode = 200, Message = "Participant added successfully" });
             }
             catch (Exception ex)
@@ -159,7 +160,7 @@ namespace ChatService.Controllers
                 return BadRequest(new { StatusCode = 400, Message = ex.Message });
             }
         }
-        
+
         [HttpDelete("{eventId:guid}/participants/{userId:int}")]
         public async Task<IActionResult> RemoveParticipant(Guid eventId, int userId)
         {
@@ -174,6 +175,48 @@ namespace ChatService.Controllers
             }
         }
 
-        
-    }   
+        [HttpPut("{eventId:guid}/participants/{userId:int}/accept")]
+        public async Task<IActionResult> AcceptEventInvitation(Guid eventId, int userId)
+        {
+            try
+            {
+                await _eventRepository.SetStatusInvitation(eventId, userId, EventStatus.Accepted);
+                return Ok(new { StatusCode = 200, Message = "Participant accepted invitation successfully." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { StatusCode = 400, Message = ex.Message });
+            }
+        }
+
+        [HttpPut("{eventId:guid}/participants/{userId:int}/reject")]
+        public async Task<IActionResult> RejectEventInvitation(Guid eventId, int userId)
+        {
+            try
+            {
+                await _eventRepository.SetStatusInvitation(eventId, userId, EventStatus.Rejected);
+                return Ok(new { StatusCode = 200, Message = "Participant rejected invitation successfully." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { StatusCode = 400, Message = ex.Message });
+            }
+        }
+
+        [HttpGet("{eventId:guid}/participants/accept")]
+        public async Task<IActionResult> GetParticipantAccepted(Guid eventId)
+        {
+            try
+            {
+                var participantAccepted =
+                    await _eventRepository.GetParticipantInvitationByStatus(eventId, EventStatus.Accepted);
+                var mappedListParticipant = ParticipantMapper.MapToDto(participantAccepted);
+                return Ok(new { statusCode = 200, message = mappedListParticipant });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { StatusCode = 400, Message = ex.Message });
+            }
+        }
+    }
 }
