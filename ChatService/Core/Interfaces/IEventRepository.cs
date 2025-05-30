@@ -13,5 +13,6 @@ public interface IEventRepository
     Task UpdateEventAsync(Guid id, EventUpdateRequest @event);
     Task AddParticipantAsync(Participant? participant);
     Task RemoveParticipantAsync(Guid eventId, int userId);
-    
+    Task SetStatusInvitation(Guid eventId, int userId, string status);
+    Task<List<Participant>> GetParticipantInvitationByStatus(Guid eventId, string status);
 }

@@ -1,5 +1,6 @@
 ﻿using ChatService.Controllers.RequestModels;
 using ChatService.Controllers.ResponseModels;
+using ChatService.Core.Constants;
 using ChatService.Core.Entities;
 
 namespace ChatService.Mapper;
@@ -19,7 +20,7 @@ public static class EventMapper
             Participants = request.Participants.Select(userId => new Participant
             {
                 UserId = userId,
-                Status = "Pending"
+                Status = EventStatus.Pending
             }).ToList()
         };
     }
@@ -36,8 +37,8 @@ public static class EventMapper
 
             Title = @event.Title,
             Description = @event.Description,
-            StartDate = @event.StartTime,
-            EndDate = @event.EndTime,
+            StartTime = @event.StartTime,
+            EndTime = @event.EndTime,
 
             Participants = @event.Participants?.Select(ParticipantMapper.MapToDto).ToList() ?? new List<ParticipantDto>()
         };

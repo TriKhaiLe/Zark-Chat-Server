@@ -75,11 +75,24 @@ public class EventRepository(ChatDbContext context) : IEventRepository
 
     public async Task AddParticipantAsync(Participant? participant)
     {
-        participant = await _context.Participants.FirstOrDefaultAsync(p =>
-            participant != null && p.UserId == participant.UserId && p.EventId == participant.EventId);
         if (participant == null)
         {
-            throw new KeyNotFoundException("Participant not found.");
+            throw new NullReferenceException("Participant not found.");
+        }
+
+        var host = await _context.Events.FirstOrDefaultAsync(e => e.Id == participant.EventId);
+
+        if (host != null && host.CreatorId == participant.UserId)
+        {
+            throw new InvalidOperationException("Participant already owned by user.");
+        }
+
+        var participantExist = await _context.Participants.FirstOrDefaultAsync(p =>
+            p.UserId == participant.UserId && p.EventId == participant.EventId);
+
+        if (participantExist != null)
+        {
+            throw new KeyNotFoundException("Participant have joined this event.");
         }
 
         _context.Participants.Add(participant);
@@ -89,5 +102,44 @@ public class EventRepository(ChatDbContext context) : IEventRepository
     public async Task RemoveParticipantAsync(Guid eventId, int userId)
     {
         var participants = await _context.Participants.Where(p => p.EventId == eventId).ToListAsync();
+        var participantToDelete = participants.FirstOrDefault(p => p.UserId == userId);
+        if (participantToDelete == null)
+        {
+            throw new KeyNotFoundException("Participant not found.");
+        }
+
+        _context.Participants.Remove(participantToDelete);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task SetStatusInvitation(Guid eventId, int userId, string status)
+    {
+        var participants = await _context.Participants.Where(p => p.EventId == eventId).ToListAsync();
+        var participantToAcceptInvitation = participants.FirstOrDefault(p => p.UserId == userId);
+
+
+        if (participantToAcceptInvitation == null)
+        {
+            throw new KeyNotFoundException("Participant not found.");
+        }
+
+        if (participantToAcceptInvitation.Status == status)
+        {
+            throw new InvalidOperationException($"Invitation already {status} by user.");
+        }
+
+        participantToAcceptInvitation.Status = status;
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<List<Participant>> GetParticipantInvitationByStatus(Guid eventId, string status)
+    {
+        var participants = await _context.Participants.Where(p => p.EventId == eventId && p.Status == status).ToListAsync();
+        if (!participants.Any())
+        {
+            throw new NullReferenceException("No accepted participant in this event.");
+        }
+
+        return participants;
     }
 }
