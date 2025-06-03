@@ -81,6 +81,8 @@ namespace ChatService.Infrastructure.Data
 
             builder.Property(e => e.EndTime).IsRequired();
 
+            builder.Property(e => e.Status).HasDefaultValue(false);
+
             builder.HasMany(e => e.Participants).WithOne(p => p.Event).HasForeignKey(p => p.EventId)
                 .OnDelete(DeleteBehavior.Cascade);
 

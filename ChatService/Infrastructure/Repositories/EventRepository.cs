@@ -142,4 +142,16 @@ public class EventRepository(ChatDbContext context) : IEventRepository
 
         return participants;
     }
+
+    public async Task MarkEventAsDone(Guid eventId)
+    {
+        var eventFind = await _context.Events.FindAsync(eventId);
+        if (eventFind == null )
+        {
+            throw new KeyNotFoundException("Event not found.");
+        }
+
+        eventFind.Status = true;
+        await _context.SaveChangesAsync();
+    }
 }
