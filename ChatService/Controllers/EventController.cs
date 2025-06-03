@@ -219,7 +219,7 @@ namespace ChatService.Controllers
             }
         }
 
-        [HttpPatch("{eventId:guid}/markedDone")]
+        [HttpPut("{eventId:guid}/markedDone")]
         public async Task<IActionResult> MarkEventAsDone(Guid eventId)
         {
             try
