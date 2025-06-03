@@ -10,6 +10,7 @@ public class Event
     public DateTime StartTime { get; set; }
     public DateTime EndTime { get; set; }
     public ICollection<Participant>? Participants { get; set; }
+    public Boolean Status { get; set; } = false;
 }
 
 public class Participant

@@ -40,7 +40,9 @@ public static class EventMapper
             StartTime = @event.StartTime,
             EndTime = @event.EndTime,
 
-            Participants = @event.Participants?.Select(ParticipantMapper.MapToDto).ToList() ?? new List<ParticipantDto>()
+            Participants = @event.Participants?.Select(ParticipantMapper.MapToDto).ToList() ?? new List<ParticipantDto>(),
+            
+            Status = @event.Status
         };
     }
 
