@@ -1,5 +1,4 @@
-﻿
-using ChatService.Application.Hubs;
+﻿using ChatService.Application.Hubs;
 using ChatService.Core.Interfaces;
 using ChatService.Infrastructure.Authentication;
 using ChatService.Infrastructure.Data;
@@ -10,6 +9,7 @@ using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -106,6 +106,9 @@ namespace ChatService
             builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
             builder.Services.AddTransient<IEmailService, EmailService>();
 
+            // Add this to allow direct access to EmailSettings via IOptions<EmailSettings>
+            builder.Services.AddOptions<EmailSettings>().Bind(builder.Configuration.GetSection("EmailSettings"));
+
             builder.Services.AddSignalR();
 
             builder.Services.AddControllers();
@@ -151,6 +154,14 @@ namespace ChatService
             });
 
             var app = builder.Build();
+
+            // Log SenderName to confirm EmailSettings is loaded from env vars
+            using (var scope = app.Services.CreateScope())
+            {
+                var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+                var emailSettings = scope.ServiceProvider.GetRequiredService<IOptions<EmailSettings>>().Value;
+                logger.LogInformation("EmailSettings.SenderName: {SenderName}", emailSettings.SenderName);
+            }
 
             app.UseSwagger();
             app.UseSwaggerUI(c =>
