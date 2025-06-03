@@ -161,6 +161,9 @@ namespace ChatService
                 var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
                 var emailSettings = scope.ServiceProvider.GetRequiredService<IOptions<EmailSettings>>().Value;
                 logger.LogInformation("EmailSettings.SenderName: {SenderName}", emailSettings.SenderName);
+                logger.LogInformation("Authority: {Authority}", authority);
+                logger.LogInformation("ValidIssuer: {Issuer}", validIssuer);
+                logger.LogInformation("ValidAudience: {Audience}", validAudience);
             }
 
             app.UseSwagger();
