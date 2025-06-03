@@ -15,4 +15,5 @@ public interface IEventRepository
     Task RemoveParticipantAsync(Guid eventId, int userId);
     Task SetStatusInvitation(Guid eventId, int userId, string status);
     Task<List<Participant>> GetParticipantInvitationByStatus(Guid eventId, string status);
+    Task MarkEventAsDone(Guid eventId);
 }

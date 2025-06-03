@@ -218,5 +218,19 @@ namespace ChatService.Controllers
                 return BadRequest(new { StatusCode = 400, Message = ex.Message });
             }
         }
+
+        [HttpPut("{eventId:guid}/markedDone")]
+        public async Task<IActionResult> MarkEventAsDone(Guid eventId)
+        {
+            try
+            {
+                await _eventRepository.MarkEventAsDone(eventId);
+                return Ok(new { statusCode = 200, message = "Mark event done successfully" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { StatusCode = 400, Message = ex.Message });
+            }
+        } 
     }
 }

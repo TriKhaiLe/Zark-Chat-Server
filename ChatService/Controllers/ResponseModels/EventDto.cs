@@ -14,6 +14,8 @@
         public DateTime EndTime { get; set; }
 
         public List<ParticipantDto> Participants { get; set; } = new();
+        
+        public Boolean Status { get; set; }
     }
 }
 
