@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
 using System.ComponentModel;
 using System.Security.Claims;
+using EnvironmentName = Microsoft.AspNetCore.Hosting.EnvironmentName;
 
 namespace ChatService.Controllers
 {
@@ -194,5 +195,49 @@ namespace ChatService.Controllers
             var publicKeys = await _userRepository.GetPublicKeysByUserIdsAsync(userIds);
             return Ok(publicKeys);
         }
+
+        // [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> GetUsers(
+            [FromQuery] string? name,
+            [FromQuery] string? email,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(email))
+            {
+                return BadRequest(new { statusCode = 400, message = "Please provide at least a name or an email to search." });
+            }
+
+            try
+            {
+                var (users, totalItems) = await _userRepository.GetUserByNameOrEmailAsync(name, email, page, pageSize);
+        
+                var totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
+
+                return Ok(new
+                {
+                    statusCode = 200,
+                    data = users,
+                    pagination = new
+                    {
+                        page,
+                        pageSize,
+                        totalItems,
+                        totalPages
+                    }
+                });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { statusCode = 404, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { statusCode = 500, message = "Internal server error", detail = ex.Message });
+            }
+        }
+
+
     }
 }
