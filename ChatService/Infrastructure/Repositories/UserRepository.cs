@@ -70,6 +70,7 @@ namespace ChatService.Infrastructure.Repositories
 
             return contacts;
         }
+
         public async Task<List<UserConnection>> GetConnectionsByUserIdsAsync(List<int> userIds)
         {
             return await _context.UserConnections
@@ -179,7 +180,8 @@ namespace ChatService.Infrastructure.Repositories
             }
         }
 
-        public async Task UpdateUserAsync(int userId, string? displayName = null, string? avatarUrl = null, string? publicKey = null)
+        public async Task UpdateUserAsync(int userId, string? displayName = null, string? avatarUrl = null,
+            string? publicKey = null)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
             if (user == null) throw new Exception($"User with ID {userId} not found.");
@@ -208,9 +210,43 @@ namespace ChatService.Infrastructure.Repositories
             {
                 var keyInfo = conv.EncryptedSessionKeys?.FirstOrDefault(k => k.UserId == userId);
                 if (keyInfo != null)
-                    result.Add(new EncryptedSessionKeyInfo { UserId = userId, EncryptedSessionKey = keyInfo.EncryptedSessionKey });
+                    result.Add(new EncryptedSessionKeyInfo
+                        { UserId = userId, EncryptedSessionKey = keyInfo.EncryptedSessionKey });
             }
+
             return result;
         }
+
+        public async Task<(List<User> users, int totalItems)> GetUserByNameOrEmailAsync(
+            string? name, string? email, int page, int pageSize)
+        {
+            var query = _context.Users.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                query = query.Where(u => EF.Functions.Like(u.DisplayName, $"%{name.Trim()}%"));
+            }
+
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                query = query.Where(u => EF.Functions.Like(u.Email, $"%{email}%"));
+            }
+
+            var totalItems = await query.CountAsync();
+
+            if (totalItems == 0)
+            {
+                throw new KeyNotFoundException("User not found");
+            }
+
+            var users = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (users, totalItems);
+        }
+
+
     }
 }
