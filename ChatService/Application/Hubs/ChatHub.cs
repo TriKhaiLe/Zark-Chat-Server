@@ -94,7 +94,25 @@ namespace ChatService.Application.Hubs
                             { "senderId", senderId.ToString() }
                         }
                     };
-                    await FirebaseMessaging.DefaultInstance.SendEachForMulticastAsync(fcmMessage);
+                    var response = await FirebaseMessaging.DefaultInstance.SendEachForMulticastAsync(fcmMessage);
+
+                    Console.WriteLine($"Sent to {fcmMessage.Tokens.Count} devices");
+                    Console.WriteLine($"Successes: {response.SuccessCount}, Failures: {response.FailureCount}");
+
+                    for (int i = 0; i < response.Responses.Count; i++)
+                    {
+                        var individualResponse = response.Responses[i];
+                        var token = fcmMessage.Tokens[i];
+
+                        if (individualResponse.IsSuccess)
+                        {
+                            Console.WriteLine($"✅ Token: {token} - MessageId: {individualResponse.MessageId}");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"❌ Token: {token} - Error: {individualResponse.Exception.Message}");
+                        }
+                    }
                 }
             }
         }
