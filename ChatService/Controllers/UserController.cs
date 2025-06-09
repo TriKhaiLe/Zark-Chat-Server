@@ -78,7 +78,8 @@ namespace ChatService.Controllers
                     Email = request.Email,
                     DisplayName = string.IsNullOrEmpty(request.DisplayName)
                         ? request.Email.Split('@')[0]
-                        : request.DisplayName
+                        : request.DisplayName,
+                    PublicKey = request.PublicKey
                 };
 
                 await _userRepository.AddUserAsync(newUser);
@@ -212,7 +213,7 @@ namespace ChatService.Controllers
             try
             {
                 var (users, totalItems) = await _userRepository.GetUserByNameOrEmailAsync(name, email, page, pageSize);
-        
+
                 var totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
 
                 return Ok(new

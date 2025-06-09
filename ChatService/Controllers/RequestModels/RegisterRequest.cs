@@ -6,6 +6,7 @@
         public required string Password { get; set; }
         public string? DisplayName { get; set; }
         public string? FcmToken { get; set; }
+        public string? PublicKey { get; set; }
     }
 
 }
