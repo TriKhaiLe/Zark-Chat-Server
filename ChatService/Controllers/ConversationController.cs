@@ -16,7 +16,7 @@ namespace ChatService.Controllers
         IConversationRepository conversationRepository,
         IUserRepository userRepository,
         IAuthenticationService authenticationService
-        ) : ControllerBase
+    ) : ControllerBase
     {
         private readonly IConversationRepository _conversationRepository = conversationRepository;
         private readonly IUserRepository _userRepository = userRepository;
@@ -25,7 +25,8 @@ namespace ChatService.Controllers
         [HttpPost("create")]
         [SwaggerOperation(Summary = "Create a new conversation")]
         [ProducesResponseType(typeof(CreateConversationResponse), StatusCodes.Status200OK)]
-        public async Task<ActionResult<CreateConversationResponse>> CreateConversation(CreateConversationRequest request)
+        public async Task<ActionResult<CreateConversationResponse>> CreateConversation(
+            CreateConversationRequest request)
         {
             if (request.ParticipantIds.Contains(request.CreatorId))
             {
@@ -95,32 +96,47 @@ namespace ChatService.Controllers
         [ProducesResponseType(typeof(IEnumerable<ConversationResponse>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetConversations()
         {
-            var userUid = User.FindFirst("user_id")?.Value;
-            if (string.IsNullOrEmpty(userUid))
-                return Unauthorized("User ID not found in token");
-
-            var user = await _userRepository.GetUserByFirebaseUidAsync(userUid);
-            if (user == null)
-                return NotFound("User not found");
-
-            var conversations = await _conversationRepository.GetConversationsByUserIdAsync(user.Id);
-
-            var response = conversations.Select(async c => new ConversationResponse
+            try
             {
-                ConversationId = c.ConversationId,
-                Type = c.Type,
-                Name = c.Name,
-                LastMessage = await _conversationRepository.GetLastMessage(c.ConversationId),
-                LastMessageAt = c.LastMessageAt
-            }).ToList();
+                var userUid = User.FindFirst("user_id")?.Value;
+                if (string.IsNullOrEmpty(userUid))
+                    return Unauthorized("User ID not found in token");
 
-            return Ok(response);
+                var user = await _userRepository.GetUserByFirebaseUidAsync(userUid);
+                if (user == null)
+                    return NotFound("User not found");
+
+                var conversations = await _conversationRepository.GetConversationsByUserIdAsync(user.Id);
+                if (conversations.Count == 0)
+                {
+                    return Ok(new List<ConversationResponse>());
+                }
+
+                var responseTasks = conversations.Select(async c => new ConversationResponse
+                {
+                    ConversationId = c.ConversationId,
+                    Type = c.Type,
+                    Name = c.Name,
+                    LastMessage = await _conversationRepository.GetLastMessage(c.ConversationId),
+                    LastMessageAt = c.LastMessageAt
+                });
+
+                var response = await Task.WhenAll(responseTasks);
+
+                return Ok(response);
+                
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { statusCode = 400, message = ex.Message });
+            }
         }
 
         [HttpGet("search")]
         [SwaggerOperation(
             Summary = "Search conversations by name or email",
-            Description = "Searches for conversations by name (group or private) or finds/creates private conversation by email"
+            Description =
+                "Searches for conversations by name (group or private) or finds/creates private conversation by email"
         )]
         [ProducesResponseType(typeof(IEnumerable<SearchResultResponse>), StatusCodes.Status200OK)]
         public async Task<IActionResult> SearchConversations([FromQuery] string query)
