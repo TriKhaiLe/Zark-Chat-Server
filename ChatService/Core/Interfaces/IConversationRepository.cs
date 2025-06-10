@@ -10,5 +10,6 @@ namespace ChatService.Core.Interfaces
         Task<List<Conversation>> GetConversationsByUserIdAsync(int userId);
         Task SaveGroupSessionKeyAsync(int conversationId, Dictionary<int, string> encryptedSessionKeys);
         Task<Dictionary<int, string>> GetGroupSessionKeysAsync(int conversationId);
+        Task<string> GetLastMessage(int conversationId);
     }
 }
