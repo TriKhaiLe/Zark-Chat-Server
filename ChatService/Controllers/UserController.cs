@@ -197,7 +197,7 @@ namespace ChatService.Controllers
             return Ok(publicKeys);
         }
 
-        // [Authorize]
+        [Authorize]
         [HttpGet]
         public async Task<IActionResult> GetUsers(
             [FromQuery] string? name,
@@ -207,7 +207,8 @@ namespace ChatService.Controllers
         {
             if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(email))
             {
-                return BadRequest(new { statusCode = 400, message = "Please provide at least a name or an email to search." });
+                return BadRequest(new
+                    { statusCode = 400, message = "Please provide at least a name or an email to search." });
             }
 
             try
@@ -235,10 +236,24 @@ namespace ChatService.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { statusCode = 500, message = "Internal server error", detail = ex.Message });
+                return StatusCode(500,
+                    new { statusCode = 500, message = "Internal server error", detail = ex.Message });
             }
         }
 
-
+        // [Authorize]
+        [HttpGet("{userId:int}")]
+        public async Task<IActionResult> GetUserById(int userId)
+        {
+            try
+            {
+                var user = await _userRepository.GetUserByIdAsync(userId);
+                return Ok(new { statusCode = 200, message = user });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { statusCode = 404, message = ex.Message });
+            }
+        }
     }
 }
