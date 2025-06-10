@@ -8,16 +8,19 @@ namespace ChatService.Infrastructure.Repositories
     public class ConversationRepository : IConversationRepository
     {
         private readonly ChatDbContext _context;
+
         public ConversationRepository(ChatDbContext context)
         {
             _context = context;
         }
+
         public async Task<Conversation?> GetConversationByIdAsync(int conversationId)
         {
             return await _context.Conversations
                 .Include(c => c.Participants)
                 .FirstOrDefaultAsync(c => c.ConversationId == conversationId);
         }
+
         public async Task UpdateLastMessageTimeAsync(int conversationId, DateTime lastMessageAt)
         {
             var conversation = await GetConversationByIdAsync(conversationId);
@@ -52,6 +55,16 @@ namespace ChatService.Infrastructure.Repositories
         public Task<Dictionary<int, string>> GetGroupSessionKeysAsync(int conversationId)
         {
             throw new NotImplementedException();
+        }
+
+        public async Task<string> GetLastMessage(int conversationId)
+        {
+            var lastMessage = await _context.ChatMessages
+                .Where(c => c.ConversationId == conversationId)
+                .OrderByDescending(c => c.SendDate)
+                .FirstOrDefaultAsync();
+            if (lastMessage?.Message != null) return lastMessage.Message;
+            throw new Exception("Message not found");
         }
     }
 }

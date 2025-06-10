@@ -105,12 +105,12 @@ namespace ChatService.Controllers
 
             var conversations = await _conversationRepository.GetConversationsByUserIdAsync(user.Id);
 
-            var response = conversations.Select(c => new ConversationResponse
+            var response = conversations.Select(async c => new ConversationResponse
             {
                 ConversationId = c.ConversationId,
                 Type = c.Type,
                 Name = c.Name,
-                LastMessage = "inconstruction...",
+                LastMessage = await _conversationRepository.GetLastMessage(c.ConversationId),
                 LastMessageAt = c.LastMessageAt
             }).ToList();
 
