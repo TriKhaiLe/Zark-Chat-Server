@@ -107,22 +107,32 @@ namespace ChatService.Controllers
                     return NotFound("User not found");
 
                 var conversations = await _conversationRepository.GetConversationsByUserIdAsync(user.Id);
-                if (conversations.Count == 0) return Ok(new List<ConversationResponse>());
-
-                var response = conversations.Select(async c => new ConversationResponse
+                if (conversations.Count == 0)
                 {
-                    ConversationId = c.ConversationId,
-                    Type = c.Type,
-                    Name = c.Name,
-                    LastMessage = await _conversationRepository.GetLastMessage(c.ConversationId),
-                    LastMessageAt = c.LastMessageAt
-                }).ToList();
+                    return Ok(new List<ConversationResponse>());
+                }
+
+                var response = new List<ConversationResponse>();
+
+                foreach (var c in conversations)
+                {
+                    var lastMessage = await _conversationRepository.GetLastMessage(c.ConversationId);
+                    response.Add(new ConversationResponse
+                    {
+                        ConversationId = c.ConversationId,
+                        Type = c.Type,
+                        Name = c.Name,
+                        LastMessage = lastMessage,
+                        LastMessageAt = c.LastMessageAt
+                    });
+                }
 
                 return Ok(response);
+                
             }
             catch (Exception ex)
             {
-                return BadRequest(new {statusCode = 400, messgae = ex.Message});
+                return BadRequest(new { statusCode = 400, message = ex.Message });
             }
         }
 
