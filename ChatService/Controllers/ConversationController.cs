@@ -112,16 +112,20 @@ namespace ChatService.Controllers
                     return Ok(new List<ConversationResponse>());
                 }
 
-                var responseTasks = conversations.Select(async c => new ConversationResponse
-                {
-                    ConversationId = c.ConversationId,
-                    Type = c.Type,
-                    Name = c.Name,
-                    LastMessage = await _conversationRepository.GetLastMessage(c.ConversationId),
-                    LastMessageAt = c.LastMessageAt
-                });
+                var response = new List<ConversationResponse>();
 
-                var response = await Task.WhenAll(responseTasks);
+                foreach (var c in conversations)
+                {
+                    var lastMessage = await _conversationRepository.GetLastMessage(c.ConversationId);
+                    response.Add(new ConversationResponse
+                    {
+                        ConversationId = c.ConversationId,
+                        Type = c.Type,
+                        Name = c.Name,
+                        LastMessage = lastMessage,
+                        LastMessageAt = c.LastMessageAt
+                    });
+                }
 
                 return Ok(response);
                 
