@@ -248,7 +248,6 @@ namespace ChatService.Controllers
             try
             {
                 var user = await _userRepository.GetUserByIdAsync(userId);
-                user.AvatarUrl = "https://picsum.photos/1920/1080?random";
                 return Ok(new { statusCode = 200, message = user });
             }
             catch (KeyNotFoundException ex)
