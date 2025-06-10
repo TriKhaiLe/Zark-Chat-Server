@@ -16,4 +16,6 @@ public interface IEventRepository
     Task SetStatusInvitation(Guid eventId, int userId, string status);
     Task<List<Participant>> GetParticipantInvitationByStatus(Guid eventId, string status);
     Task MarkEventAsDone(Guid eventId);
+    Task<List<Event>> GetEventsToNotifyAsync(DateTime currentTime);
+    Task MarkNotificationSent(Guid eventId);
 }

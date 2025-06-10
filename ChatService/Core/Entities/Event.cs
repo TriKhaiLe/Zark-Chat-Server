@@ -11,6 +11,8 @@ public class Event
     public DateTime EndTime { get; set; }
     public ICollection<Participant>? Participants { get; set; }
     public Boolean Status { get; set; } = false;
+    public DateTime NotificationTime { get; set; }
+    public bool IsNotification { get; set; } = false;
 }
 
 public class Participant
@@ -20,5 +22,4 @@ public class Participant
     public string Status { get; set; }
     public Event Event { get; set; }
     public User User { get; set; } = null!;
-    
 }
