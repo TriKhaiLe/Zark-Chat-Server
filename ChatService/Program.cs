@@ -7,6 +7,8 @@ using ChatService.Model;
 using ChatService.Services.Email;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -17,10 +19,12 @@ namespace ChatService
 {
     public class Program
     {
+        [Obsolete("Obsolete")]
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
             var config = builder.Configuration;
+            
 
             builder.Services.AddCors(options =>
             {
@@ -93,9 +97,22 @@ namespace ChatService
                 client.BaseAddress = new Uri(tokenUri);
             });
 
+            builder.Services.AddHangfire(config =>
+            {
+                config.SetDataCompatibilityLevel((CompatibilityLevel.Version_180))
+                    .UseSimpleAssemblyNameTypeSerializer()
+                    .UseRecommendedSerializerSettings()
+                    .UsePostgreSqlStorage(connectionString);
+            });
+            builder.Services.AddHangfireServer();
+            
+            
+
+
             builder.Services.AddDbContext<ChatDbContext>(options =>
                 options.UseNpgsql(connectionString));
-
+            
+            builder.Services.AddScoped<EventNotificationJob>();
             builder.Services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
             builder.Services.AddScoped<IConversationRepository, ConversationRepository>();
             builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -177,15 +194,27 @@ namespace ChatService
             app.UseCors("AllowChatClient");
             app.UseAuthentication();
             app.UseAuthorization();
+            
+            using (var scope = app.Services.CreateScope())
+            {
+                var jobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
+
+                jobManager.AddOrUpdate<EventNotificationJob>(
+                    "send-event-notifications",
+                    job => job.SendEventNotificationsAsync(),
+                    Cron.MinuteInterval(1)
+                );
+            }
 
             app.MapHub<ChatHub>("/chatHub");
-
+            app.UseHangfireDashboard("/hangfire");
             app.UseHttpsRedirection();
 
             app.MapControllers();
 
             app.Run();
         }
+        
 
         static string? GetConfigValue(ConfigurationManager config, string key, string? fallbackEnvVar = null)
         {

@@ -13,7 +13,9 @@ namespace ChatService.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class EventController(IEventRepository eventRepository, IUserRepository userRepository) : ControllerBase
+    public class EventController(
+        IEventRepository eventRepository,
+        IUserRepository userRepository) : ControllerBase
     {
         private readonly IEventRepository _eventRepository = eventRepository;
         private readonly IUserRepository _userRepository = userRepository;
@@ -231,6 +233,6 @@ namespace ChatService.Controllers
             {
                 return BadRequest(new { StatusCode = 400, Message = ex.Message });
             }
-        } 
+        }
     }
 }

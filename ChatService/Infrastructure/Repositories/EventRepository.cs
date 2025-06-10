@@ -154,4 +154,26 @@ public class EventRepository(ChatDbContext context) : IEventRepository
         eventFind.Status = true;
         await _context.SaveChangesAsync();
     }
+
+    public async Task<List<Event>> GetEventsToNotifyAsync(DateTime currentTime)
+    {
+        var from = currentTime.AddSeconds(-30);
+        var to = currentTime.AddSeconds(30);
+
+        return await _context.Events
+            .Include(e => e.Participants)
+            .Where(e => !e.IsNotification && e.NotificationTime >= from && e.NotificationTime <= to)
+            .ToListAsync();
+    }
+
+
+    public async Task MarkNotificationSent(Guid eventId)
+    {
+        var ev = await _context.Events.FindAsync(eventId);
+        if (ev != null)
+        {
+            ev.IsNotification = true;
+            await _context.SaveChangesAsync();
+        }
+    }
 }

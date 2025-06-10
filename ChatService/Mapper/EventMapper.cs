@@ -21,7 +21,8 @@ public static class EventMapper
             {
                 UserId = userId,
                 Status = EventStatus.Pending
-            }).ToList()
+            }).ToList(),
+            NotificationTime = request.NotificationTime,
         };
     }
 
@@ -40,10 +41,11 @@ public static class EventMapper
             StartTime = @event.StartTime,
             EndTime = @event.EndTime,
 
-            Participants = @event.Participants?.Select(ParticipantMapper.MapToDto).ToList() ?? new List<ParticipantDto>(),
-            
-            Status = @event.Status
+            Participants = @event.Participants?.Select(ParticipantMapper.MapToDto).ToList() ??
+                           new List<ParticipantDto>(),
+
+            Status = @event.Status,
+            NotificationTime = @event.NotificationTime,
         };
     }
-
 }

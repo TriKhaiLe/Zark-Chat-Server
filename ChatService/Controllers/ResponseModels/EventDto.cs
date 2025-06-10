@@ -16,6 +16,7 @@
         public List<ParticipantDto> Participants { get; set; } = new();
         
         public Boolean Status { get; set; }
+        public DateTime NotificationTime { get; set; }
     }
 }
 
