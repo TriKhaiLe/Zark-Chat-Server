@@ -22,10 +22,9 @@ public static class EventMapper
                 UserId = userId,
                 Status = EventStatus.Pending
             }).ToList(),
-            NotificationTime = request.NotificationTime ?? request.StartTime.AddMinutes(-15)
+            NotificationTime = request.NotificationTime,
         };
     }
-
 
     public static EventDto ToEventDto(Event? @event)
     {

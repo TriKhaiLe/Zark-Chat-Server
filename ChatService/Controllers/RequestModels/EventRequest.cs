@@ -8,7 +8,7 @@
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
         public List<int> Participants { get; set; } = new();
-        public DateTime? NotificationTime { get; set; }
+        public DateTime NotificationTime { get; set; }
     }
 
     public class EventUpdateRequest
