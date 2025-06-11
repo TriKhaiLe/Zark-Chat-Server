@@ -195,16 +195,16 @@ namespace ChatService
             app.UseAuthentication();
             app.UseAuthorization();
             
-            using (var scope = app.Services.CreateScope())
-            {
-                var jobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
+            //using (var scope = app.Services.CreateScope())
+            //{
+            //    var jobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
 
-                jobManager.AddOrUpdate<EventNotificationJob>(
-                    "send-event-notifications",
-                    job => job.SendEventNotificationsAsync(),
-                    Cron.MinuteInterval(1)
-                );
-            }
+            //    jobManager.AddOrUpdate<EventNotificationJob>(
+            //        "send-event-notifications",
+            //        job => job.SendEventNotificationsAsync(),
+            //        Cron.MinuteInterval(1)
+            //    );
+            //}
 
             app.MapHub<ChatHub>("/chatHub");
             app.UseHangfireDashboard("/hangfire");
