@@ -210,8 +210,15 @@ namespace ChatService.Application.Hubs
                 var user = await _userRepository.GetUserByFirebaseUidAsync(senderUid);
                 if (user != null)
                 {
-                    await _userRepository.RemoveConnectionIdAsync(user.Id, Context.ConnectionId);
-                    Console.WriteLine($"Removed ConnectionId {Context.ConnectionId} from user {senderUid}");
+                    try
+                    {
+                        await _userRepository.RemoveConnectionIdAsync(user.Id, Context.ConnectionId);
+                        Console.WriteLine($"Removed ConnectionId {Context.ConnectionId} from user {senderUid}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error removing ConnectionId {Context.ConnectionId} from user {senderUid}: {ex.Message}");
+                    }
                 }
             }
 
